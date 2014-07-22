@@ -184,7 +184,10 @@ var SupSub = P(MathCommand, function(_, super_) {
   Options.p.charsThatBreakOutOfSupSub = '';
   _.finalizeTree = function() {
     this.ends[L].write = function(cursor, ch) {
-      if (cursor.options.charsThatBreakOutOfSupSub.indexOf(ch) > -1) {
+      // Break out of super/subscripts if character matches,
+      // unless it's the negative sign at the very start.
+      if (cursor.options.charsThatBreakOutOfSupSub.indexOf(ch) > -1 &&
+          !(ch === '-' && !cursor[L]) ) {
         cursor.insRightOf(this.parent);
       }
       MathBlock.p.write.apply(this, arguments);
