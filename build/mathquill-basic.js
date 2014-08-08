@@ -2086,7 +2086,7 @@ Controller.open(function(_) {
         if (!ctrlr.editable) rootjQ.prepend(textareaSpan);
         textarea.focus();
       }
-      e.preventDefault(); // doesn't work in IE\u22648, but it's a one-line fix:
+      e.preventDefault(); // doesn't work in IE<=8, but it's a one-line fix:
       e.target.unselectable = true; // http://jsbin.com/yagekiji/1
 
       cursor.blink = noop;

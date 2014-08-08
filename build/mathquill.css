@@ -398,6 +398,8 @@
   position: absolute;
   clip: rect(1em 1em 1em 1em);
   resize: none;
+  border: none;
+  height: 1px;
 }
 .mq-math-mode .mq-matrixed {
   background: white;
