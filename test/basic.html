@@ -19,7 +19,7 @@
 
 <p>Backslash <code>\</code> and dollar <code>$</code> aren't special, <code>/</code> still works, font works:
 
-<p><span id="basic">\sqrt{2}</span>
+<p><span id="basic">\operatorname{kg}</span>
 
 <p><textarea id="basic-latex"></textarea>
 
@@ -35,6 +35,7 @@ var latex = $('#basic-latex').on('keydown keypress', function() {
   });
 });
 var mq = MathQuill.MathField($('#basic')[0], {
+  autoOperatorNames: "kg km m mm C c yr wk d hr min s J K W N lb Pa bar atm mmHg L rad rev deg mol V",
   handlers: { reflow: function(mq) {
     if (!latex.is(':focus')) latex.val(mq.latex());
   } }
