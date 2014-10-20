@@ -19,26 +19,56 @@
 
 <p>Backslash <code>\</code> and dollar <code>$</code> aren't special, <code>/</code> still works, font works:
 
-<p><span id="basic">\operatorname{kg}</span>
+<p><span id="scientific">1.0x10^5</span><span id="units">\operatorname{kg}</span>
 
-<p><textarea id="basic-latex"></textarea>
+<h3>TODO</h3>
+<ul>
+    <li><code>1\cdot10^5</code> (or whatever instead of cdot) vs <code>1x10^5</code></li>
+    <li>may need an enter handler to submit</li>
+    <li>restrict the expressions users can enter on both sides</li>
+    <li>make movement between inputs more intelligent. when moving right from the left textarea you can currently enter the left side of the right textarea, which is weird because you basically stayed in the same spot, or a different random area which is weird because you jumped</li>
+</ul>
+
+<h3>Value:</h3>
+<p id="basic-latex"></p>
 
 </div>
 <script type="text/javascript" src="support/jquery-1.7.2.js"></script>
 <script type="text/javascript" src="../build/mathquill-basic.js"></script>
 <script type="text/javascript">
-var latex = $('#basic-latex').on('keydown keypress', function() {
-  var prev = latex.val();
-  setTimeout(function() {
-    var now = latex.val();
-    if (now !== prev) mq.latex(now);
-  });
-});
-var mq = MathQuill.MathField($('#basic')[0], {
+var units = document.getElementById("units");
+var scientific = document.getElementById("scientific");
+var units_, scientific_;
+
+function handleEnter() {
+  $("#basic-latex").text(scientific_.latex() + " " + units_.latex());
+};
+
+units_ = MathQuill.MathField(units, {
   autoOperatorNames: "kg km m mm C c yr wk d hr min s J K W N lb Pa bar atm mmHg L rad rev deg mol V",
-  handlers: { reflow: function(mq) {
-    if (!latex.is(':focus')) latex.val(mq.latex());
-  } }
+  handlers: {
+    reflow: function(mq) {
+      $('#basic-latex').val(mq.latex());
+    },
+    moveOutOf: function(dir, math) {
+        if (dir === MathQuill.L) {
+          scientific_.focus();
+        }
+    },
+    enter: handleEnter,
+  }
+});
+
+scientific_ = MathQuill.MathField(scientific, {
+  autoOperatorNames: "x",
+  handlers: {
+    moveOutOf: function(dir, math) {
+        if (dir === MathQuill.R) {
+          units_.focus();
+        }
+    },
+    enter: handleEnter,
+  }
 });
 </script>
 </body>
