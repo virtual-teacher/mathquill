@@ -368,14 +368,6 @@ var LiveFraction =
 LatexCmds.over =
 CharCmds['/'] = P(Fraction, function(_, super_) {
   _.createLeftOf = function(cursor) {
-    var curseeeeeees = cursor;
-    while (curseeeeeees.parent) {
-        if (curseeeeeees instanceof LiveFraction) {
-            return;
-        }
-        curseeeeeees = curseeeeeees.parent;
-    }
-
     if (!this.replacedFragment) {
       var leftward = cursor[L];
       while (leftward &&

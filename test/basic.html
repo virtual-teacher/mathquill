@@ -34,7 +34,7 @@
 
 </div>
 <script type="text/javascript" src="support/jquery-1.7.2.js"></script>
-<script type="text/javascript" src="../build/mathquill-basic.js"></script>
+<script type="text/javascript" src="../build/mathquill.js"></script>
 <script type="text/javascript">
 var units = document.getElementById("units");
 var scientific = document.getElementById("scientific");
@@ -44,8 +44,8 @@ function handleEnter() {
   $("#basic-latex").text(scientific_.latex() + " " + units_.latex());
 };
 
-units_ = MathQuill.MathField(units, {
-  autoOperatorNames: "kg km m mm C c yr wk d hr min s J K W N lb Pa bar atm mmHg L rad rev deg mol V",
+units_ = MathQuill.UnitField(units, {
+  unitNames: "kg km m mm C c yr wk d hr min s J K W N lb Pa bar atm mmHg L rad rev deg mol V",
   handlers: {
     reflow: function(mq) {
       $('#basic-latex').val(mq.latex());
@@ -60,7 +60,7 @@ units_ = MathQuill.MathField(units, {
 });
 
 scientific_ = MathQuill.MathField(scientific, {
-  autoOperatorNames: "x",
+  // autoOperatorNames: "x",
   handlers: {
     moveOutOf: function(dir, math) {
         if (dir === MathQuill.R) {

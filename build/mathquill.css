@@ -9,7 +9,7 @@
  */
 @font-face {
   font-family: Symbola;
-  src: url(/fonts/Symbola.eot);
+  src: url(/font/Symbola.eot);
   src: local("Symbola Regular"), local("Symbola"), url(/fonts/Symbola.ttf) format("truetype"), url(/fonts/Symbola.woff) format("woff");
 }
 .mq-editable-field {
@@ -252,15 +252,15 @@
 .mq-math-mode .mq-array > span {
   display: block;
 }
-.mq-math-mode .mq-un-italicized {
+.mq-math-mode .mq-operator-name {
   font-family: Symbola, "Times New Roman", serif;
   line-height: .9;
   font-style: normal;
 }
-.mq-math-mode var.mq-un-italicized.mq-first {
+.mq-math-mode var.mq-operator-name.mq-first {
   padding-left: .2em;
 }
-.mq-math-mode var.mq-un-italicized.mq-last {
+.mq-math-mode var.mq-operator-name.mq-last {
   padding-right: .2em;
 }
 .mq-math-mode .mq-fraction {

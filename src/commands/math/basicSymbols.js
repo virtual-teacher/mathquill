@@ -151,9 +151,9 @@ optionProcessors.autoOperatorNames = function(cmds) {
   var list = cmds.split(' '), dict = {}, maxLength = 0;
   for (var i = 0; i < list.length; i += 1) {
     var cmd = list[i];
-    // if (cmd.length < 2) {
-    //   throw '"'+cmd+'" not minimum length of 2';
-    // }
+    if (cmd.length < 2) {
+      throw '"'+cmd+'" not minimum length of 2';
+    }
     dict[cmd] = 1;
     maxLength = max(maxLength, cmd.length);
   }

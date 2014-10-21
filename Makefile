@@ -28,7 +28,10 @@ SOURCES_BASIC = \
   $(SRC_DIR)/commands/math.js \
   $(SRC_DIR)/commands/math/advancedSymbols.js \
   $(SRC_DIR)/commands/math/basicSymbols.js \
-  $(SRC_DIR)/commands/math/commands.js
+  $(SRC_DIR)/commands/math/commands.js \
+  $(SRC_DIR)/commands/unit.js \
+  $(SRC_DIR)/commands/unit/basicSymbols.js \
+  $(SRC_DIR)/commands/unit/commands.js
 
 CSS_DIR = $(SRC_DIR)/css
 CSS_MAIN = $(CSS_DIR)/main.less
