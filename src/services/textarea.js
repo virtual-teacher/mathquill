@@ -92,6 +92,11 @@ Controller.open(function(_) {
     this.scrollHoriz();
   };
   _.paste = function(text) {
+    if (this.API.__options.unitNames) {
+        // HACK
+        this.writeUnit(text).cursor.show();
+        return;
+    }
     // TODO: document `statelessClipboard` config option in README, after
     // making it work like it should, that is, in both text and math mode
     // (currently only works in math fields, so worse than pointless, it

@@ -133,6 +133,11 @@ Node.open(function(_) {
       while (cursor[L]) ctrlr.selectLeft();
       break;
 
+    // XXX kill this... maybe?
+    case "Meta-[":
+    case "Meta-]":
+      break;
+
     default:
       return;
     }

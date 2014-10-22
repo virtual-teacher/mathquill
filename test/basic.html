@@ -41,15 +41,15 @@ var scientific = document.getElementById("scientific");
 var units_, scientific_;
 
 function handleEnter() {
-  $("#basic-latex").text(scientific_.latex() + " " + units_.latex());
+  $("#basic-latex").text(scientific_.latex() + " " + units_.text());
 };
 
 units_ = MathQuill.UnitField(units, {
   unitNames: "kg km m mm C c yr wk d hr min s J K W N lb Pa bar atm mmHg L rad rev deg mol V",
   handlers: {
-    reflow: function(mq) {
-      $('#basic-latex').val(mq.latex());
-    },
+    // reflow: function(mq) {
+    //   $('#basic-latex').val(mq.latex());
+    // },
     moveOutOf: function(dir, math) {
         if (dir === MathQuill.L) {
           scientific_.focus();

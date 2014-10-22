@@ -2,14 +2,18 @@
  * Symbols for Basic Mathematics
  ********************************/
 
-var UnitLetter = P(Symbol, function(_, super_) {
+var UnitLetter = P(UnitSymbol, function(_, super_) {
   _.init = function(ch) {
       this.letter = ch;
       return super_.init.call(this, ch, '<var>' + ch + '</var>');
   };
+
   _.text = function() {
-    return this.ctrlSeq;
+    return this.name;
   };
+
+  _.latex = _.text;
+
   _.createLeftOf = function(cursor) {
     var autoCmds = cursor.options.autoCommands, maxLength = autoCmds._maxLength;
     if (maxLength > 0) {
@@ -32,17 +36,20 @@ var UnitLetter = P(Symbol, function(_, super_) {
     }
     super_.createLeftOf.apply(this, arguments);
   };
+
   _.italicize = function(bool) {
     this.jQ.toggleClass('mq-operator-name', !bool);
     return this;
   };
+
   _.finalizeTree = _.siblingDeleted = _.siblingCreated = function(opts, dir) {
     // don't auto-un-italicize if the sibling to my right changed (dir === R or
     // undefined) and it's now a UnitLetter, it will un-italicize everyone
     if (dir !== L && this[R] instanceof UnitLetter) return;
-    this.autoUnItalicize(opts);
+    this.mergeVariablesToUnits(opts);
   };
-  _.autoUnItalicize = function(opts) {
+
+  _.mergeVariablesToUnits = function(opts) {
     var autoOps = opts.unitNames;
     if (autoOps._maxLength === 0) return;
     // want longest possible operator names, so join together entire contiguous
@@ -55,7 +62,7 @@ var UnitLetter = P(Symbol, function(_, super_) {
     // which, if any, are part of an operator name
     Fragment(l[R] || this.parent.ends[L], r[L] || this.parent.ends[R]).each(function(el) {
       el.italicize(true).jQ.removeClass('mq-first mq-last');
-      el.ctrlSeq = el.letter;
+      el.name = el.letter;
     });
 
     // check for operator names: at each position from left to right, check
@@ -69,11 +76,8 @@ var UnitLetter = P(Symbol, function(_, super_) {
             var last = letter;
           }
 
-          var isBuiltIn = false;
-          first.ctrlSeq = (isBuiltIn ? '\\' : '\\operatorname{') + first.ctrlSeq;
-          last.ctrlSeq += (isBuiltIn ? ' ' : '}');
-          if (nonOperatorSymbol(first[L])) first.jQ.addClass('mq-first');
-          if (nonOperatorSymbol(last[R])) last.jQ.addClass('mq-last');
+          // if (nonOperatorSymbol(first[L])) first.jQ.addClass('mq-first');
+          // if (nonOperatorSymbol(last[R])) last.jQ.addClass('mq-last');
 
           i += len - 1;
           first = last;
@@ -82,9 +86,10 @@ var UnitLetter = P(Symbol, function(_, super_) {
       }
     }
   };
-  function nonOperatorSymbol(node) {
-    return node instanceof Symbol && !(node instanceof BinaryOperator);
-  }
+
+  // function nonOperatorSymbol(node) {
+  //   return node instanceof UnitSymbol;
+  // }
 });
 
 optionProcessors.unitNames = function(cmds) {
@@ -102,9 +107,9 @@ optionProcessors.unitNames = function(cmds) {
 };
 
 // XXX
-// VanillaSymbol's
 // UnitCmds[' '] = UnitCmds.space = bind(VanillaSymbol, '\\ ', ' ');
 
-UnitCmds['¹'] = bind(LatexFragment, '^1');
-UnitCmds['²'] = bind(LatexFragment, '^2');
-UnitCmds['³'] = bind(LatexFragment, '^3');
+// XXX seems to work without this - why?
+// UnitCmds['¹'] = bind(LatexFragment, '^1');
+// UnitCmds['²'] = bind(LatexFragment, '^2');
+// UnitCmds['³'] = bind(LatexFragment, '^3');

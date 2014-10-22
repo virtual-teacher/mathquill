@@ -9,11 +9,8 @@
  */
 var UnitElement = P(Node, function(_, super_) {
   _.finalizeInsert = function(options, cursor) { // `cursor` param is only for
-      // SupSub::contactWeld, and is deliberately only passed in by writeLatex,
-      // see ea7307eb4fac77c149a11ffdf9a831df85247693
     var self = this;
     self.postOrder('finalizeTree', options);
-    self.postOrder('contactWeld', cursor);
 
     // note: this order is important.
     // empty elements need the empty box provided by blur to
@@ -33,11 +30,12 @@ var UnitElement = P(Node, function(_, super_) {
  * Descendant commands are organized into blocks.
  */
 var UnitCommand = P(UnitElement, function(_, super_) {
-  _.init = function(ctrlSeq, htmlTemplate, textTemplate) {
+  _.init = function(name, htmlTemplate, textTemplate) {
+    console.log("UnitCommand ", name);
     var cmd = this;
     super_.init.call(cmd);
 
-    if (!cmd.ctrlSeq) cmd.ctrlSeq = ctrlSeq;
+    if (!cmd.name) cmd.name = name;
     if (htmlTemplate) cmd.htmlTemplate = htmlTemplate;
     if (textTemplate) cmd.textTemplate = textTemplate;
   };
@@ -271,12 +269,6 @@ var UnitCommand = P(UnitElement, function(_, super_) {
     });
   };
 
-  // methods to export a string representation of the math tree
-  _.latex = function() {
-    return this.foldChildren(this.ctrlSeq, function(latex, child) {
-      return latex + '{' + (child.latex() || ' ') + '}';
-    });
-  };
   _.textTemplate = [''];
   _.text = function() {
     var cmd = this, i = 0;
@@ -289,16 +281,21 @@ var UnitCommand = P(UnitElement, function(_, super_) {
       return text + child.text() + (cmd.textTemplate[i] || '');
     });
   };
+
+  // XXX we implement latex in a bunch of places it probably doesn't make sense
+  // to since it's called for every selection for not understood reasons.
+  _.latex = _.text;
 });
 
 /**
  * Lightweight command without blocks or children.
  */
 var UnitSymbol = P(UnitCommand, function(_, super_) {
-  _.init = function(ctrlSeq, html, text) {
-    if (!text) text = ctrlSeq && ctrlSeq.length > 1 ? ctrlSeq.slice(1) : ctrlSeq;
+  _.init = function(name) {
+    console.log("UnitSymbol ", name);
+    var text = name && name.length > 1 ? name.slice(1) : name;
 
-    super_.init.call(this, ctrlSeq, html, [ text ]);
+    super_.init.call(this, name, '<span>' + name + '</span>', [ text ]);
   };
 
   _.parser = function() { return Parser.succeed(this); };
@@ -325,16 +322,10 @@ var UnitSymbol = P(UnitCommand, function(_, super_) {
       cursor.insRightOf(this);
   };
 
-  _.latex = function(){ return this.ctrlSeq; };
   _.text = function(){ return this.textTemplate; };
+  _.latex = _.text;
   _.placeCursor = noop;
   _.isEmpty = function(){ return true; };
-});
-
-var UnitVanillaSymbol = P(UnitSymbol, function(_, super_) {
-  _.init = function(ch, html) {
-    super_.init.call(this, ch, '<span>'+(html || ch)+'</span>');
-  };
 });
 
 /**
@@ -343,21 +334,27 @@ var UnitVanillaSymbol = P(UnitSymbol, function(_, super_) {
  * ancestor operators.
  */
 var UnitBlock = P(UnitElement, function(_, super_) {
+  _.init = function() {
+      console.log("UnitBlock", arguments);
+      super_.init.call(this, arguments);
+  };
   _.join = function(methodName) {
     return this.foldChildren('', function(fold, child) {
       return fold + child[methodName]();
     });
   };
+
   _.html = function() { return this.join('html'); };
-  _.latex = function() { return this.join('latex'); };
   _.text = function() {
     return this.ends[L] === this.ends[R] ?
       this.ends[L].text() :
       '(' + this.join('text') + ')'
     ;
   };
+  _.latex = _.text;
 
   _.keystroke = function(key, e, ctrlr) {
+      console.log("keystroke", key);
     if (ctrlr.API.__options.spaceBehavesLikeTab
         && (key === 'Spacebar' || key === 'Shift-Spacebar')) {
       e.preventDefault();
@@ -392,15 +389,16 @@ var UnitBlock = P(UnitElement, function(_, super_) {
   };
 
   _.write = function(cursor, ch, replacedFragment) {
+      console.log("write", ch);
     var cmd;
-    if (ch.match(/^[a-zA-Z]$/))
-      cmd = Letter(ch);
-    else if (cmd = CharCmds[ch] || UnitCmds[ch])
+    if (ch.match(/^[a-zA-Z]$/)) {
+      cmd = UnitLetter(ch);
+    } else if (cmd = UnitCmds[ch]) {
       cmd = cmd(ch);
-    else {
+    } else {
         // XXX remove
-        console.log("here");
-      cmd = UnitVanillaSymbol(ch);
+        // this fires only for spaces?
+      cmd = UnitSymbol(ch);
     }
 
     if (replacedFragment) cmd.replaces(replacedFragment);

@@ -163,12 +163,14 @@ var EditableField = MathQuill.EditableField = P(AbstractMathQuill, function(_) {
 
   _.keystroke = function(keys) {
     var keys = keys.replace(/^\s+|\s+$/g, '').split(/\s+/);
+    console.log("keystroke ", keys);
     for (var i = 0; i < keys.length; i += 1) {
       this.__controller.keystroke(keys[i], { preventDefault: noop });
     }
     return this;
   };
   _.typedText = function(text) {
+    console.log("typedText ", text);
     for (var i = 0; i < text.length; i += 1) this.__controller.typedText(text.charAt(i));
     return this;
   };
