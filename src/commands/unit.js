@@ -294,7 +294,7 @@ var UnitCommand = P(UnitElement, function(_, super_) {
 /**
  * Lightweight command without blocks or children.
  */
-var Symbol = P(UnitCommand, function(_, super_) {
+var UnitSymbol = P(UnitCommand, function(_, super_) {
   _.init = function(ctrlSeq, html, text) {
     if (!text) text = ctrlSeq && ctrlSeq.length > 1 ? ctrlSeq.slice(1) : ctrlSeq;
 
@@ -330,16 +330,10 @@ var Symbol = P(UnitCommand, function(_, super_) {
   _.placeCursor = noop;
   _.isEmpty = function(){ return true; };
 });
-var VanillaSymbol = P(Symbol, function(_, super_) {
+
+var UnitVanillaSymbol = P(UnitSymbol, function(_, super_) {
   _.init = function(ch, html) {
     super_.init.call(this, ch, '<span>'+(html || ch)+'</span>');
-  };
-});
-var BinaryOperator = P(Symbol, function(_, super_) {
-  _.init = function(ctrlSeq, html, text) {
-    super_.init.call(this,
-      ctrlSeq, '<span class="mq-binary-operator">'+html+'</span>', text
-    );
   };
 });
 
@@ -396,14 +390,18 @@ var UnitBlock = P(UnitElement, function(_, super_) {
     while (pageX < node.jQ.offset().left) node = node[L];
     return node.seek(pageX, cursor);
   };
+
   _.write = function(cursor, ch, replacedFragment) {
     var cmd;
-    if (ch.match(/^[a-eg-zA-Z]$/)) //exclude f because want florin
+    if (ch.match(/^[a-zA-Z]$/))
       cmd = Letter(ch);
     else if (cmd = CharCmds[ch] || UnitCmds[ch])
       cmd = cmd(ch);
-    else
-      cmd = VanillaSymbol(ch);
+    else {
+        // XXX remove
+        console.log("here");
+      cmd = UnitVanillaSymbol(ch);
+    }
 
     if (replacedFragment) cmd.replaces(replacedFragment);
 
