@@ -107,8 +107,10 @@ var Node = P(function(_) {
 
     function jQadd(el) {
       if (el.getAttribute) {
-        var cmdId = el.getAttribute('mathquill-command-id');
-        var blockId = el.getAttribute('mathquill-block-id');
+        var cmdId = el.getAttribute('mathquill-command-id') ||
+                    el.getAttribute('data-mathquill-command-id');
+        var blockId = el.getAttribute('mathquill-block-id') ||
+                      el.getAttribute('data-mathquill-block-id');
         if (cmdId) Node.byId[cmdId].jQadd(el);
         if (blockId) Node.byId[blockId].jQadd(el);
       }

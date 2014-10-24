@@ -19,6 +19,21 @@ var UnitSup =
 UnitCmds["^"] = P(UnitCommand, function(_, super_) {
   _.supsub = 'sup';
 
+  _.react = function() {
+      return React.DOM.span({
+            className: "mq-supsub mq-non-leaf mq-sup-only",
+            "data-mathquill-block-id": this.id,
+          },
+          React.DOM.span({className: "mq-sup"}, this.blocks[0].html())
+      );
+  };
+
+  _.html = function() {
+      var x = React.renderComponentToStaticMarkup(this.react());
+      console.log(x);
+      return x;
+  };
+
   _.htmlTemplate =
       '<span class="mq-supsub mq-non-leaf mq-sup-only">'
     +   '<span class="mq-sup">&0</span>'
@@ -59,6 +74,26 @@ UnitCmds["^"] = P(UnitCommand, function(_, super_) {
 
 var UnitLiveFraction =
 UnitCmds['/'] = P(UnitCommand, function(_, super_) {
+  _.react = function() {
+      var num = this.blocks[0];
+      var denom = this.blocks[1];
+
+      return React.DOM.span({
+              className: "mq-fraction mq-non-leaf",
+              "data-mathquill-block-id": this.id,
+          },
+          React.DOM.span({className: "mq-numerator"}, num.react()),
+          React.DOM.span({className: "mq-denominator"}, denom.react()),
+          React.DOM.span({style: {display: "inline-block", width: 0}},
+              "\u00a0"
+          )
+      );
+  };
+
+  _.html = function() {
+      return React.renderComponentToStaticMarkup(this.react());
+  };
+
   _.htmlTemplate =
       '<span class="mq-fraction mq-non-leaf">'
     +   '<span class="mq-numerator">&0</span>'

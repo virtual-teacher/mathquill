@@ -57,11 +57,10 @@ var UnitCommand = P(UnitElement, function(_, super_) {
   _.init = function(name, htmlTemplate, textTemplate) {
     console.log("UnitCommand ", name);
     var cmd = this;
-    super_.init.call(cmd);
+    super_.init.call(this);
 
+    if (htmlTemplate || textTemplate) { debugger; }
     if (!cmd.name) cmd.name = name;
-    if (htmlTemplate) cmd.htmlTemplate = htmlTemplate;
-    if (textTemplate) cmd.textTemplate = textTemplate;
   };
 
   // obvious methods
@@ -134,18 +133,22 @@ var UnitCommand = P(UnitElement, function(_, super_) {
     var updownInto = updown && this[updown+'Into'];
     cursor.insAtDirEnd(-dir, updownInto || this.ends[-dir]);
   };
+
   _.deleteTowards = function(dir, cursor) {
     cursor.startSelection();
     this.selectTowards(dir, cursor);
     cursor.select();
   };
+
   _.selectTowards = function(dir, cursor) {
     cursor[-dir] = this;
     cursor[dir] = this[dir];
   };
+
   _.selectChildren = function() {
     return Selection(this, this);
   };
+
   _.unselectInto = function(dir, cursor) {
     cursor.insAtDirEnd(-dir, cursor.anticursor.ancestors[this.id]);
   };
@@ -262,6 +265,7 @@ var UnitCommand = P(UnitElement, function(_, super_) {
 
     var cmd = this;
     var blocks = cmd.blocks;
+
     var cmdId = ' mathquill-command-id=' + cmd.id;
     var tokens = cmd.htmlTemplate.match(/<[^<>]+>|[^<>]+/g);
 
@@ -326,7 +330,20 @@ var UnitSymbol = P(UnitCommand, function(_, super_) {
     console.log("UnitSymbol ", name);
     var text = name && name.length > 1 ? name.slice(1) : name;
 
-    super_.init.call(this, name, '<span>' + name + '</span>', [ text ]);
+    this.name = name;
+    this.htmlTemplate = '<span>' + name + '</span>';
+    this.textTemplate = [ text ];
+    super_.init.call(this);
+  };
+
+  _.react = function() {
+      return React.DOM.span({
+          "data-mathquill-block-id": this.id,
+      }, this.name);
+  };
+
+  _.html = function() {
+      return React.renderComponentToStaticMarkup(this.react());
   };
 
   _.parser = function() { return Parser.succeed(this); };
@@ -376,6 +393,7 @@ var UnitBlock = P(UnitElement, function(_, super_) {
     });
   };
 
+  _.react = function() { return this.join('react'); };
   _.html = function() { return this.join('html'); };
   _.text = function() {
     return this.ends[L] === this.ends[R] ?

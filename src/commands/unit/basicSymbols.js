@@ -1,7 +1,20 @@
+/*
+ */
+
 var UnitLetter = P(UnitSymbol, function(_, super_) {
   _.init = function(ch) {
       this.letter = ch;
       return super_.init.call(this, ch, '<var>' + ch + '</var>');
+  };
+
+  _.react = function() {
+      return React.DOM.var({
+          "data-mathquill-block-id": this.id,
+      }, this.letter);
+  };
+
+  _.html = function() {
+      return React.renderComponentToStaticMarkup(this.react());
   };
 
   _.text = function() {
