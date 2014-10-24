@@ -13,9 +13,9 @@ var UnitLetter = P(UnitSymbol, function(_, super_) {
       }, this.letter);
   };
 
-  _.html = function() {
-      return React.renderComponentToStaticMarkup(this.react());
-  };
+  // _.html = function() {
+  //     return React.renderComponentToStaticMarkup(this.react());
+  // };
 
   _.text = function() {
     return this.name;

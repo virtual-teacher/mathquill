@@ -342,9 +342,9 @@ var UnitSymbol = P(UnitCommand, function(_, super_) {
       }, this.name);
   };
 
-  _.html = function() {
-      return React.renderComponentToStaticMarkup(this.react());
-  };
+  // _.html = function() {
+  //     return React.renderComponentToStaticMarkup(this.react());
+  // };
 
   _.parser = function() { return Parser.succeed(this); };
   _.numBlocks = function() { return 0; };

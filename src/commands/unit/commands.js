@@ -28,11 +28,11 @@ UnitCmds["^"] = P(UnitCommand, function(_, super_) {
       );
   };
 
-  _.html = function() {
-      var x = React.renderComponentToStaticMarkup(this.react());
-      console.log(x);
-      return x;
-  };
+  // _.html = function() {
+  //     var x = React.renderComponentToStaticMarkup(this.react());
+  //     console.log(x);
+  //     return x;
+  // };
 
   _.htmlTemplate =
       '<span class="mq-supsub mq-non-leaf mq-sup-only">'
@@ -90,9 +90,9 @@ UnitCmds['/'] = P(UnitCommand, function(_, super_) {
       );
   };
 
-  _.html = function() {
-      return React.renderComponentToStaticMarkup(this.react());
-  };
+  // _.html = function() {
+  //     return React.renderComponentToStaticMarkup(this.react());
+  // };
 
   _.htmlTemplate =
       '<span class="mq-fraction mq-non-leaf">'
