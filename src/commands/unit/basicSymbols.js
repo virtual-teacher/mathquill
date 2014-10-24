@@ -1,16 +1,24 @@
-/*
+/**
+ * without blocks or children.
  */
-
-var UnitLetter = P(UnitSymbol, function(_, super_) {
+var UnitLetter = P(UnitCommand, function(_, super_) {
   _.init = function(ch) {
-      this.letter = ch;
-      return super_.init.call(this, ch, '<var>' + ch + '</var>');
+      this.name = ch;
+      this.htmlTemplate = '<span>' + ch + '</span>';
+      this.textTemplate = [ ch ];
+      super_.init.call(this);
   };
+
+  _.parser = function() { return Parser.succeed(this); };
+
+  _.numBlocks = function() { return 0; };
+
+  _.createBlocks = noop;
 
   _.react = function() {
       return React.DOM.var({
           "data-mathquill-block-id": this.id,
-      }, this.letter);
+      }, this.name);
   };
 
   // _.html = function() {
@@ -28,9 +36,9 @@ var UnitLetter = P(UnitSymbol, function(_, super_) {
     if (maxLength > 0) {
       // want longest possible autocommand, so join together longest
       // sequence of letters
-      var str = this.letter, l = cursor[L], i = 1;
-      while (l instanceof Letter && i < maxLength) {
-        str = l.letter + str, l = l[L], i += 1;
+      var str = this.name, l = cursor[L], i = 1;
+      while (l instanceof UnitLetter && i < maxLength) {
+        str = l.name + str, l = l[L], i += 1;
       }
       // check for an autocommand, going thru substrings longest to shortest
       while (str.length) {
@@ -61,6 +69,31 @@ var UnitLetter = P(UnitSymbol, function(_, super_) {
     this.mergeVariablesToUnits(opts.unitNames);
   };
 
+  _.replaces = function(replacedFragment) {
+    replacedFragment.remove();
+  };
+
+  _.moveTowards = function(dir, cursor) {
+    cursor.jQ.insDirOf(dir, this.jQ);
+    cursor[-dir] = this;
+    cursor[dir] = this[dir];
+  };
+
+  _.deleteTowards = function(dir, cursor) {
+    cursor[dir] = this.remove()[dir];
+  };
+
+  _.seek = function(pageX, cursor) {
+    // insert at whichever side the click was closer to
+    if (pageX - this.jQ.offset().left < this.jQ.outerWidth()/2)
+      cursor.insLeftOf(this);
+    else
+      cursor.insRightOf(this);
+  };
+
+  _.placeCursor = noop;
+  _.isEmpty = function(){ return true; };
+
   _.mergeVariablesToUnits = function(unitNames) {
     // There are no unit names to merge
     if (unitNames._maxLength === 0) {
@@ -69,16 +102,16 @@ var UnitLetter = P(UnitSymbol, function(_, super_) {
 
     // want longest possible operator names, so join together entire contiguous
     // sequence of letters
-    var str = this.letter;
+    var str = this.name;
     var l, r;
 
     // move left...
     for (l = this[L]; l instanceof UnitLetter; l = l[L]) {
-        str = l.letter + str;
+        str = l.name + str;
     }
     // ... and right
     for (r = this[R]; r instanceof UnitLetter; r = r[R]) {
-        str += r.letter;
+        str += r.name;
     }
 
     var first = l[R] || this.parent.ends[L];
@@ -88,7 +121,7 @@ var UnitLetter = P(UnitSymbol, function(_, super_) {
     // which, if any, are part of unit names
     Fragment(first, last).each(function(el) {
       el.makeUnit(false).jQ.removeClass('mq-first mq-last');
-      el.name = el.letter;
+      el.name = el.name;
     });
 
     // check for operator names: at each position from left to right, check

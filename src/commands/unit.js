@@ -1,5 +1,5 @@
 /*************************************************
- * Abstract classes of math blocks and commands.
+ * Abstract classes of unit blocks and commands.
  ************************************************/
 
 /* Universal unit write handler.
@@ -27,25 +27,24 @@ function unitWrite(cursor, ch, replacedFragment) {
 }
 
 /**
- * Math tree node base class.
- * Some math-tree-specific extensions to Node.
- * Both UnitBlock's and UnitCommand's descend from it.
+ * Unit tree node base class.
+ * Some unit-tree-specific extensions to Node.
+ * Both UnitBlock and UnitCommand descend from it.
  */
 var UnitElement = P(Node, function(_, super_) {
   _.finalizeInsert = function(options, cursor) { // `cursor` param is only for
-    var self = this;
-    self.postOrder('finalizeTree', options);
+    this.postOrder('finalizeTree', options);
 
     // note: this order is important.
     // empty elements need the empty box provided by blur to
     // be present in order for their dimensions to be measured
     // correctly by 'reflow' handlers.
-    self.postOrder('blur');
+    this.postOrder('blur');
 
-    self.postOrder('reflow');
-    if (self[R].siblingCreated) self[R].siblingCreated(options, L);
-    if (self[L].siblingCreated) self[L].siblingCreated(options, R);
-    self.bubble('reflow');
+    this.postOrder('reflow');
+    if (this[R].siblingCreated) this[R].siblingCreated(options, L);
+    if (this[L].siblingCreated) this[L].siblingCreated(options, R);
+    this.bubble('reflow');
   };
 });
 
@@ -56,11 +55,10 @@ var UnitElement = P(Node, function(_, super_) {
 var UnitCommand = P(UnitElement, function(_, super_) {
   _.init = function(name, htmlTemplate, textTemplate) {
     console.log("UnitCommand ", name);
-    var cmd = this;
     super_.init.call(this);
 
     if (htmlTemplate || textTemplate) { debugger; }
-    if (!cmd.name) cmd.name = name;
+    if (!this.name) this.name = name;
   };
 
   // obvious methods
@@ -108,13 +106,12 @@ var UnitCommand = P(UnitElement, function(_, super_) {
   _.createBlocks = function() {
       // XXX we should never get here
       debugger;
-    var cmd = this,
-      numBlocks = cmd.numBlocks(),
-      blocks = cmd.blocks = Array(numBlocks);
+    var numBlocks = this.numBlocks(),
+    var blocks = this.blocks = Array(numBlocks);
 
     for (var i = 0; i < numBlocks; i += 1) {
       var newBlock = blocks[i] = UnitBlock();
-      newBlock.adopt(cmd, cmd.ends[R], 0);
+      newBlock.adopt(this, this.ends[R], 0);
     }
   };
 
@@ -320,61 +317,6 @@ var UnitCommand = P(UnitElement, function(_, super_) {
   // XXX we implement latex in a bunch of places it probably doesn't make sense
   // to since it's called for every selection for not understood reasons.
   _.latex = _.text;
-});
-
-/**
- * Lightweight command without blocks or children.
- */
-var UnitSymbol = P(UnitCommand, function(_, super_) {
-  _.init = function(name) {
-    console.log("UnitSymbol ", name);
-    var text = name && name.length > 1 ? name.slice(1) : name;
-
-    this.name = name;
-    this.htmlTemplate = '<span>' + name + '</span>';
-    this.textTemplate = [ text ];
-    super_.init.call(this);
-  };
-
-  _.react = function() {
-      return React.DOM.span({
-          "data-mathquill-block-id": this.id,
-      }, this.name);
-  };
-
-  // _.html = function() {
-  //     return React.renderComponentToStaticMarkup(this.react());
-  // };
-
-  _.parser = function() { return Parser.succeed(this); };
-  _.numBlocks = function() { return 0; };
-
-  _.replaces = function(replacedFragment) {
-    replacedFragment.remove();
-  };
-
-  _.createBlocks = noop;
-
-  _.moveTowards = function(dir, cursor) {
-    cursor.jQ.insDirOf(dir, this.jQ);
-    cursor[-dir] = this;
-    cursor[dir] = this[dir];
-  };
-  _.deleteTowards = function(dir, cursor) {
-    cursor[dir] = this.remove()[dir];
-  };
-  _.seek = function(pageX, cursor) {
-    // insert at whichever side the click was closer to
-    if (pageX - this.jQ.offset().left < this.jQ.outerWidth()/2)
-      cursor.insLeftOf(this);
-    else
-      cursor.insRightOf(this);
-  };
-
-  _.text = function(){ return this.textTemplate; };
-  _.latex = _.text;
-  _.placeCursor = noop;
-  _.isEmpty = function(){ return true; };
 });
 
 /**

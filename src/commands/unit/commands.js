@@ -42,6 +42,7 @@ UnitCmds["^"] = P(UnitCommand, function(_, super_) {
 
   _.textTemplate = [ '^' ];
 
+  // XXX this should not be a block - we only allow nats up here
   _.createBlocks = function() {
       var block = UnitBlock();
       block.adopt(this, this.ends[R], 0);
