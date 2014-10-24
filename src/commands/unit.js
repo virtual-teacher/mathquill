@@ -2,6 +2,30 @@
  * Abstract classes of math blocks and commands.
  ************************************************/
 
+/* Universal unit write handler.
+ *
+ * Called by UnitBlock::write and UnitSup::finalizeTree.
+ */
+function unitWrite(cursor, ch, replacedFragment) {
+    console.log("write", ch);
+  var cmd;
+  if (ch.match(/^[a-zA-Z]$/)) {
+    cmd = UnitLetter(ch);
+  } else if (UnitCmds[ch]) {
+    cmd = UnitCmds[ch](ch);
+  } else {
+      // XXX remove
+      // this fires only for spaces?
+    cmd = UnitLetter(ch);
+  }
+
+  if (replacedFragment) {
+      cmd.replaces(replacedFragment);
+  }
+
+  cmd.createLeftOf(cursor);
+}
+
 /**
  * Math tree node base class.
  * Some math-tree-specific extensions to Node.
@@ -45,6 +69,7 @@ var UnitCommand = P(UnitElement, function(_, super_) {
     replacedFragment.disown();
     this.replacedFragment = replacedFragment;
   };
+
   _.isEmpty = function() {
     return this.foldChildren(true, function(isEmpty, child) {
       return isEmpty && child.isEmpty();
@@ -80,7 +105,10 @@ var UnitCommand = P(UnitElement, function(_, super_) {
     cmd.finalizeInsert(cursor.options);
     cmd.placeCursor(cursor);
   };
+
   _.createBlocks = function() {
+      // XXX we should never get here
+      debugger;
     var cmd = this,
       numBlocks = cmd.numBlocks(),
       blocks = cmd.blocks = Array(numBlocks);
@@ -90,6 +118,7 @@ var UnitCommand = P(UnitElement, function(_, super_) {
       newBlock.adopt(cmd, cmd.ends[R], 0);
     }
   };
+
   _.placeCursor = function(cursor) {
     //insert the cursor at the right end of the first empty child, searching
     //left-to-right, or if none empty, the right end child
@@ -120,6 +149,7 @@ var UnitCommand = P(UnitElement, function(_, super_) {
   _.unselectInto = function(dir, cursor) {
     cursor.insAtDirEnd(-dir, cursor.anticursor.ancestors[this.id]);
   };
+
   _.seek = function(pageX, cursor) {
     function getBounds(node) {
       var bounds = {}
@@ -193,6 +223,7 @@ var UnitCommand = P(UnitElement, function(_, super_) {
     var matches = this.htmlTemplate.match(/&\d+/g);
     return matches ? matches.length : 0;
   };
+
   _.html = function() {
     // Render the entire math subtree rooted at this command, as HTML.
     // Expects .createBlocks() to have been called already, since it uses the
@@ -304,6 +335,7 @@ var UnitSymbol = P(UnitCommand, function(_, super_) {
   _.replaces = function(replacedFragment) {
     replacedFragment.remove();
   };
+
   _.createBlocks = noop;
 
   _.moveTowards = function(dir, cursor) {
@@ -347,6 +379,7 @@ var UnitBlock = P(UnitElement, function(_, super_) {
   _.html = function() { return this.join('html'); };
   _.text = function() {
     return this.ends[L] === this.ends[R] ?
+    // XXX this errors
       this.ends[L].text() :
       '(' + this.join('text') + ')'
     ;
@@ -388,23 +421,7 @@ var UnitBlock = P(UnitElement, function(_, super_) {
     return node.seek(pageX, cursor);
   };
 
-  _.write = function(cursor, ch, replacedFragment) {
-      console.log("write", ch);
-    var cmd;
-    if (ch.match(/^[a-zA-Z]$/)) {
-      cmd = UnitLetter(ch);
-    } else if (cmd = UnitCmds[ch]) {
-      cmd = cmd(ch);
-    } else {
-        // XXX remove
-        // this fires only for spaces?
-      cmd = UnitSymbol(ch);
-    }
-
-    if (replacedFragment) cmd.replaces(replacedFragment);
-
-    cmd.createLeftOf(cursor);
-  };
+  _.write = unitWrite;
 
   _.focus = function() {
     this.jQ.addClass('mq-hasCursor');

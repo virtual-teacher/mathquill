@@ -27,6 +27,12 @@ UnitCmds["^"] = P(UnitCommand, function(_, super_) {
 
   _.textTemplate = [ '^' ];
 
+  _.createBlocks = function() {
+      var block = UnitBlock();
+      block.adopt(this, this.ends[R], 0);
+      this.blocks = [block];
+  };
+
   _.createLeftOf = function(cursor) {
     // don't create the superscript if there's nothing to the left of the
     // cursor or we're within a superscript
@@ -46,7 +52,7 @@ UnitCmds["^"] = P(UnitCommand, function(_, super_) {
       if (ch === " ") {
         cursor.insRightOf(this.parent);
       }
-      UnitBlock.p.write.apply(this, arguments);
+      unitWrite(cursor, ch);
     };
   };
 });
@@ -66,6 +72,16 @@ UnitCmds['/'] = P(UnitCommand, function(_, super_) {
   _.finalizeTree = function() {
     this.upInto = this.ends[R].upOutOf = this.ends[L];
     this.downInto = this.ends[L].downOutOf = this.ends[R];
+  };
+
+  _.createBlocks = function() {
+      var numerator = UnitBlock();
+      var denominator = UnitBlock();
+      this.blocks = [numerator, denominator];
+
+      // not sure exactly what this does
+      numerator.adopt(this, this.ends[R], 0);
+      denominator.adopt(this, this.ends[R], 0);
   };
 
   _.createLeftOf = function(cursor) {

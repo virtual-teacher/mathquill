@@ -1,7 +1,3 @@
-/*********************************
- * Symbols for Basic Mathematics
- ********************************/
-
 var UnitLetter = P(UnitSymbol, function(_, super_) {
   _.init = function(ch) {
       this.letter = ch;
@@ -37,60 +33,122 @@ var UnitLetter = P(UnitSymbol, function(_, super_) {
     super_.createLeftOf.apply(this, arguments);
   };
 
-  _.italicize = function(bool) {
-    this.jQ.toggleClass('mq-operator-name', !bool);
+  _.makeUnit = function(bool) {
+    this.jQ.toggleClass('mq-operator-name', bool);
     return this;
   };
 
   _.finalizeTree = _.siblingDeleted = _.siblingCreated = function(opts, dir) {
     // don't auto-un-italicize if the sibling to my right changed (dir === R or
     // undefined) and it's now a UnitLetter, it will un-italicize everyone
-    if (dir !== L && this[R] instanceof UnitLetter) return;
-    this.mergeVariablesToUnits(opts);
+    if (dir !== L && this[R] instanceof UnitLetter) {
+        return;
+    }
+
+    this.mergeVariablesToUnits(opts.unitNames);
   };
 
-  _.mergeVariablesToUnits = function(opts) {
-    var autoOps = opts.unitNames;
-    if (autoOps._maxLength === 0) return;
+  _.mergeVariablesToUnits = function(unitNames) {
+    // There are no unit names to merge
+    if (unitNames._maxLength === 0) {
+        return;
+    }
+
     // want longest possible operator names, so join together entire contiguous
     // sequence of letters
     var str = this.letter;
-    for (var l = this[L]; l instanceof UnitLetter; l = l[L]) str = l.letter + str;
-    for (var r = this[R]; r instanceof UnitLetter; r = r[R]) str += r.letter;
+    var l, r;
+
+    // move left...
+    for (l = this[L]; l instanceof UnitLetter; l = l[L]) {
+        str = l.letter + str;
+    }
+    // ... and right
+    for (r = this[R]; r instanceof UnitLetter; r = r[R]) {
+        str += r.letter;
+    }
+
+    var first = l[R] || this.parent.ends[L];
+    var last  = r[L] || this.parent.ends[R];
 
     // removeClass and delete flags from all letters before figuring out
-    // which, if any, are part of an operator name
-    Fragment(l[R] || this.parent.ends[L], r[L] || this.parent.ends[R]).each(function(el) {
-      el.italicize(true).jQ.removeClass('mq-first mq-last');
+    // which, if any, are part of unit names
+    Fragment(first, last).each(function(el) {
+      el.makeUnit(false).jQ.removeClass('mq-first mq-last');
       el.name = el.letter;
     });
 
     // check for operator names: at each position from left to right, check
     // substrings from longest to shortest
-    outer: for (var i = 0, first = l[R] || this.parent.ends[L]; i < str.length; i += 1, first = first[R]) {
-      for (var len = min(autoOps._maxLength, str.length - i); len > 0; len -= 1) {
-        var word = str.slice(i, i + len);
-        if (autoOps.hasOwnProperty(word)) {
-          for (var j = 0, letter = first; j < len; j += 1, letter = letter[R]) {
-            letter.italicize(false);
-            var last = letter;
-          }
+    //
+    // say the string to check is "abcd", then we check the following in order:
+    // * abcd
+    // * abc <-
+    // * ab
+    // * a
+    // * bcd
+    // * bc
+    // * b
+    // * cd
+    // * c
+    // * d
+    //
+    // Unless the longest unit name we want to check for is 3, in which case,
+    // we start at the arrow.
+    var startIx = 0;
+    var front = first;
+    while (startIx < str.length) {
+        var len = min(unitNames._maxLength, str.length - startIx);
 
-          // if (nonOperatorSymbol(first[L])) first.jQ.addClass('mq-first');
-          // if (nonOperatorSymbol(last[R])) last.jQ.addClass('mq-last');
+        while (true) {
+            var endIx = startIx + len;
+            var candidateUnit = str.slice(startIx, endIx);
 
-          i += len - 1;
-          first = last;
-          continue outer;
+            if (unitNames.hasOwnProperty(candidateUnit)) {
+                // we found a match! make it look like a unit and march on.
+                var back = walk(front, R, len);
+                mergeFragment(front, back);
+
+                front = back;
+                startIx = endIx;
+                break;
+            } else if (len === 1) {
+                // kind of an ugly case here - we need to be careful to break
+                // on single letters to startIx will be incremented to the next
+                // start
+                break;
+            } else {
+                // check the next longest string with the same start
+                len--;
+            }
         }
-      }
+
+        startIx += len;
     }
   };
-
-  // function nonOperatorSymbol(node) {
-  //   return node instanceof UnitSymbol;
-  // }
 });
+
+/* Walk n steps in direction dir from cursor and return a new cursor of that
+ * location.
+ */
+function walk(cursor, dir, n) {
+    for (var i = 0; i < n; i++) {
+        cursor = cursor[dir];
+    }
+    return cursor;
+}
+
+/* Merge all the letters between l and r inclusive into a unit
+ *
+ * Note this doesn't take a Fragment (though it probably could).
+ */
+function mergeFragment(l, r) {
+    var ptr = l;
+    while (ptr !== r) {
+        ptr.makeUnit(true);
+        ptr = ptr[R];
+    }
+}
 
 optionProcessors.unitNames = function(cmds) {
   if (!/^[a-z]+(?: [a-z]+)*$/i.test(cmds)) {
