@@ -6,7 +6,6 @@
 var UnitLetter = P(UnitCommand, function(_, super_) {
   _.init = function(ch) {
       this.name = ch;
-      this.htmlTemplate = '<span>' + ch + '</span>';
       this.textTemplate = [ ch ];
       super_.init.call(this);
   };
@@ -32,29 +31,6 @@ var UnitLetter = P(UnitCommand, function(_, super_) {
   };
 
   _.latex = _.text;
-
-  _.createLeftOf = function(cursor) {
-    var autoCmds = cursor.options.autoCommands, maxLength = autoCmds._maxLength;
-    if (maxLength > 0) {
-      // want longest possible autocommand, so join together longest
-      // sequence of letters
-      var str = this.name, l = cursor[L], i = 1;
-      while (l instanceof UnitLetter && i < maxLength) {
-        str = l.name + str, l = l[L], i += 1;
-      }
-      // check for an autocommand, going thru substrings longest to shortest
-      while (str.length) {
-        if (autoCmds.hasOwnProperty(str)) {
-          for (var i = 2, l = cursor[L]; i < str.length; i += 1, l = l[L]);
-          Fragment(l, cursor[L]).remove();
-          cursor[L] = l[L];
-          return UnitCmds[str](str).createLeftOf(cursor);
-        }
-        str = str.slice(1);
-      }
-    }
-    super_.createLeftOf.apply(this, arguments);
-  };
 
   _.makeUnit = function(bool) {
     this.jQ.toggleClass('mq-operator-name', bool);
@@ -87,10 +63,11 @@ var UnitLetter = P(UnitCommand, function(_, super_) {
 
   _.seek = function(pageX, cursor) {
     // insert at whichever side the click was closer to
-    if (pageX - this.jQ.offset().left < this.jQ.outerWidth()/2)
+    if (pageX - this.jQ.offset().left < this.jQ.outerWidth()/2) {
       cursor.insLeftOf(this);
-    else
+    } else {
       cursor.insRightOf(this);
+    }
   };
 
   _.placeCursor = noop;
