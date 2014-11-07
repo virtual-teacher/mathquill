@@ -255,6 +255,7 @@ var Fragment = P(function(_) {
     return (dir === L ? this.adopt(parent, withDir, oppDir)
                       : this.adopt(parent, oppDir, withDir));
   };
+
   _.adopt = function(parent, leftward, rightward) {
     prayWellFormed(parent, leftward, rightward);
 

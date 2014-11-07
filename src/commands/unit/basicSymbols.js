@@ -1,5 +1,7 @@
 /**
  * without blocks or children.
+ *
+ * This holds unmerged letters. Numbers? Spaces?
  */
 var UnitLetter = P(UnitCommand, function(_, super_) {
   _.init = function(ch) {
@@ -9,9 +11,13 @@ var UnitLetter = P(UnitCommand, function(_, super_) {
       super_.init.call(this);
   };
 
-  _.parser = function() { return Parser.succeed(this); };
+  _.parser = function() {
+      return Parser.succeed(this);
+  };
 
-  _.numBlocks = function() { return 0; };
+  _.numBlocks = function() {
+      return 0;
+  };
 
   _.createBlocks = noop;
 
@@ -20,10 +26,6 @@ var UnitLetter = P(UnitCommand, function(_, super_) {
           "data-mathquill-block-id": this.id,
       }, this.name);
   };
-
-  // _.html = function() {
-  //     return React.renderComponentToStaticMarkup(this.react());
-  // };
 
   _.text = function() {
     return this.name;

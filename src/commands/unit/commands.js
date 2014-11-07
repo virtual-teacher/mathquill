@@ -1,6 +1,5 @@
-/***************************
- * Commands and Operators.
- **************************/
+/* Superscripts and Fracs
+ */
 
 function classesAmongAncestors(cursor, classes) {
     while (cursor.parent) {

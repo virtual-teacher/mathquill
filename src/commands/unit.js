@@ -7,16 +7,21 @@
  * Called by UnitBlock::write and UnitSup::finalizeTree.
  */
 function unitWrite(cursor, ch, replacedFragment) {
-    console.log("write", ch);
   var cmd;
   if (ch.match(/^[a-zA-Z]$/)) {
     cmd = UnitLetter(ch);
   } else if (UnitCmds[ch]) {
     cmd = UnitCmds[ch](ch);
-  } else {
-      // XXX remove
-      // this fires only for spaces?
+  } else if (ch.match(/^\d$/)) {
+    // TODO
     cmd = UnitLetter(ch);
+  } else if (ch === " ") {
+    // TODO
+    cmd = UnitLetter(ch);
+  } else {
+      // TODO - handle weird characters!
+      // - angstrom, micro, degree, etc
+      return;
   }
 
   if (replacedFragment) {
@@ -101,18 +106,6 @@ var UnitCommand = P(UnitElement, function(_, super_) {
     }
     cmd.finalizeInsert(cursor.options);
     cmd.placeCursor(cursor);
-  };
-
-  _.createBlocks = function() {
-      // XXX we should never get here
-      debugger;
-    var numBlocks = this.numBlocks();
-    var blocks = this.blocks = Array(numBlocks);
-
-    for (var i = 0; i < numBlocks; i += 1) {
-      var newBlock = blocks[i] = UnitBlock();
-      newBlock.adopt(this, this.ends[R], 0);
-    }
   };
 
   _.placeCursor = function(cursor) {
