@@ -53,12 +53,12 @@ var UnitElement = P(Node, function(_, super_) {
  * Descendant commands are organized into blocks.
  */
 var UnitCommand = P(UnitElement, function(_, super_) {
-  _.init = function(name, htmlTemplate, textTemplate) {
-    console.log("UnitCommand ", name);
+  _.init = function(name) {
     super_.init.call(this);
 
-    if (htmlTemplate || textTemplate) { debugger; }
-    if (!this.name) this.name = name;
+    if (!this.name) {
+        this.name = name;
+    }
   };
 
   // obvious methods
