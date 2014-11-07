@@ -191,7 +191,10 @@ var UnitCommand = P(UnitElement, function(_, super_) {
   };
 
   _.textTemplate = [''];
-  _.text = function() {
+
+  // XXX we implement latex in a bunch of places it probably doesn't make sense
+  // to since it's called for every selection for not understood reasons.
+  _.latex = _.text = function() {
     var cmd = this, i = 0;
     return cmd.foldChildren(cmd.textTemplate[i], function(text, child) {
       i += 1;
@@ -202,10 +205,6 @@ var UnitCommand = P(UnitElement, function(_, super_) {
       return text + child.text() + (cmd.textTemplate[i] || '');
     });
   };
-
-  // XXX we implement latex in a bunch of places it probably doesn't make sense
-  // to since it's called for every selection for not understood reasons.
-  _.latex = _.text;
 });
 
 /**
@@ -232,19 +231,20 @@ var UnitBlock = P(UnitElement, function(_, super_) {
   };
 
   _.html = function() { return this.join('html'); };
-  _.text = function() {
+
+  _.latex = _.text = function() {
     return this.ends[L] === this.ends[R] ?
     // XXX this errors
+        // Can we just get rid of it?
       this.ends[L].text() :
       '(' + this.join('text') + ')'
     ;
   };
-  _.latex = _.text;
 
   _.keystroke = function(key, e, ctrlr) {
       console.log("keystroke", key);
-    if (ctrlr.API.__options.spaceBehavesLikeTab
-        && (key === 'Spacebar' || key === 'Shift-Spacebar')) {
+    if (ctrlr.API.__options.spaceBehavesLikeTab &&
+        (key === 'Spacebar' || key === 'Shift-Spacebar')) {
       e.preventDefault();
       ctrlr.escapeDir(key === 'Shift-Spacebar' ? L : R, key, e);
       return;
@@ -260,19 +260,29 @@ var UnitBlock = P(UnitElement, function(_, super_) {
     if (!updownInto && this[dir]) cursor.insAtDirEnd(-dir, this[dir]);
     else cursor.insDirOf(dir, this.parent);
   };
+
   _.selectOutOf = function(dir, cursor) {
     cursor.insDirOf(dir, this.parent);
   };
+
   _.deleteOutOf = function(dir, cursor) {
     cursor.unwrapGramp();
   };
+
   _.seek = function(pageX, cursor) {
     var node = this.ends[R];
     if (!node || node.jQ.offset().left + node.jQ.outerWidth() < pageX) {
       return cursor.insAtRightEnd(this);
     }
-    if (pageX < this.ends[L].jQ.offset().left) return cursor.insAtLeftEnd(this);
-    while (pageX < node.jQ.offset().left) node = node[L];
+
+    if (pageX < this.ends[L].jQ.offset().left) {
+        return cursor.insAtLeftEnd(this);
+    }
+
+    while (pageX < node.jQ.offset().left) {
+        node = node[L];
+    }
+
     return node.seek(pageX, cursor);
   };
 
@@ -284,6 +294,7 @@ var UnitBlock = P(UnitElement, function(_, super_) {
 
     return this;
   };
+
   _.blur = function() {
     this.jQ.removeClass('mq-hasCursor');
     if (this.isEmpty())

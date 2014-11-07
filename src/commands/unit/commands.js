@@ -14,9 +14,7 @@ function classesAmongAncestors(cursor, classes) {
     return false;
 }
 
-var UnitSup =
-UnitCmds["^"] = P(UnitCommand, function(_, super_) {
-  _.supsub = 'sup';
+var UnitSup = UnitCmds["^"] = P(UnitCommand, function(_, super_) {
 
   _.react = function() {
       return React.DOM.span({
@@ -28,7 +26,7 @@ UnitCmds["^"] = P(UnitCommand, function(_, super_) {
   };
 
   _.numBlocks = function() {
-      return 1;
+      return 0;
   };
 
   _.textTemplate = [ '^' ];
@@ -39,6 +37,11 @@ UnitCmds["^"] = P(UnitCommand, function(_, super_) {
       block.adopt(this, this.ends[R], 0);
       this.blocks = [block];
   };
+
+  // _.createBlocks = function() {
+  //     this.sup = UnitNumber();
+  //     this.sup.adopt(this, this.ends[R], 0);
+  // };
 
   _.createLeftOf = function(cursor) {
     // don't create the superscript if there's nothing to the left of the
@@ -62,10 +65,11 @@ UnitCmds["^"] = P(UnitCommand, function(_, super_) {
       unitWrite(cursor, ch);
     };
   };
+
 });
 
-var UnitLiveFraction =
-UnitCmds['/'] = P(UnitCommand, function(_, super_) {
+var UnitLiveFraction = UnitCmds['/'] = P(UnitCommand, function(_, super_) {
+
   _.react = function() {
       var num = this.blocks[0];
       var denom = this.blocks[1];
@@ -124,6 +128,8 @@ UnitCmds['/'] = P(UnitCommand, function(_, super_) {
         cursor[L] = leftward;
       }
     }
+
     super_.createLeftOf.call(this, cursor);
   };
+
 });

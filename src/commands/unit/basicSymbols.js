@@ -3,7 +3,8 @@
  *
  * This holds unmerged letters. Numbers? Spaces?
  */
-var UnitLetter = P(UnitCommand, function(_, super_) {
+var UnitChar = P(UnitCommand, function(_, super_) {
+
   _.init = function(ch) {
       this.name = ch;
       this.textTemplate = [ ch ];
@@ -26,26 +27,11 @@ var UnitLetter = P(UnitCommand, function(_, super_) {
       }, this.name);
   };
 
-  _.text = function() {
+  _.latex = _.text = function() {
     return this.name;
   };
 
-  _.latex = _.text;
-
-  _.makeUnit = function(bool) {
-    this.jQ.toggleClass('mq-operator-name', bool);
-    return this;
-  };
-
-  _.finalizeTree = _.siblingDeleted = _.siblingCreated = function(opts, dir) {
-    // don't auto-un-italicize if the sibling to my right changed (dir === R or
-    // undefined) and it's now a UnitLetter, it will un-italicize everyone
-    if (dir !== L && this[R] instanceof UnitLetter) {
-        return;
-    }
-
-    this.mergeVariablesToUnits(opts.unitNames);
-  };
+  // _.finalizeTree = _.siblingDeleted = _.siblingCreated = noop;
 
   _.replaces = function(replacedFragment) {
     replacedFragment.remove();
@@ -63,7 +49,7 @@ var UnitLetter = P(UnitCommand, function(_, super_) {
 
   _.seek = function(pageX, cursor) {
     // insert at whichever side the click was closer to
-    if (pageX - this.jQ.offset().left < this.jQ.outerWidth()/2) {
+    if (pageX - this.jQ.offset().left < this.jQ.outerWidth() / 2) {
       cursor.insLeftOf(this);
     } else {
       cursor.insRightOf(this);
@@ -71,7 +57,30 @@ var UnitLetter = P(UnitCommand, function(_, super_) {
   };
 
   _.placeCursor = noop;
-  _.isEmpty = function(){ return true; };
+
+  _.isEmpty = function() {
+      return true;
+  };
+});
+
+var UnitNumber = P(UnitChar, function(_, super_) {
+});
+
+var UnitLetter = P(UnitChar, function(_, super_) {
+  _.finalizeTree = _.siblingDeleted = _.siblingCreated = function(opts, dir) {
+    // don't auto-un-italicize if the sibling to my right changed (dir === R or
+    // undefined) and it's now a UnitLetter, it will un-italicize everyone
+    if (dir !== L && this[R] instanceof UnitLetter) {
+        return;
+    }
+
+    this.mergeVariablesToUnits(opts.unitNames);
+  };
+
+  _.makeUnit = function(bool) {
+      this.jQ.toggleClass('mq-operator-name', bool);
+      return this;
+  };
 
   _.mergeVariablesToUnits = function(unitNames) {
     // There are no unit names to merge
@@ -99,8 +108,8 @@ var UnitLetter = P(UnitCommand, function(_, super_) {
     // removeClass and delete flags from all letters before figuring out
     // which, if any, are part of unit names
     Fragment(first, last).each(function(el) {
-      el.makeUnit(false).jQ.removeClass('mq-first mq-last');
-      el.name = el.name;
+        el.makeUnit(false).jQ.removeClass('mq-first mq-last');
+        el.name = el.name;
     });
 
     // check for operator names: at each position from left to right, check
@@ -151,6 +160,7 @@ var UnitLetter = P(UnitCommand, function(_, super_) {
         startIx += len;
     }
   };
+
 });
 
 /* Walk n steps in direction dir from cursor and return a new cursor of that
