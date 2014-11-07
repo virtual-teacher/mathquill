@@ -28,6 +28,10 @@ UnitCmds["^"] = P(UnitCommand, function(_, super_) {
       );
   };
 
+  _.numBlocks = function() {
+      return 1;
+  };
+
   // _.html = function() {
   //     var x = React.renderComponentToStaticMarkup(this.react());
   //     console.log(x);
@@ -89,6 +93,10 @@ UnitCmds['/'] = P(UnitCommand, function(_, super_) {
               "\u00a0"
           )
       );
+  };
+
+  _.numBlocks = function() {
+      return 2;
   };
 
   // _.html = function() {

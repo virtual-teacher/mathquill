@@ -193,37 +193,6 @@ var UnitCommand = P(UnitElement, function(_, super_) {
     });
   }
 
-  // methods involved in creating and cross-linking with HTML DOM nodes
-  /*
-    They all expect an .htmlTemplate like
-      '<span>&0</span>'
-    or
-      '<span><span>&0</span><span>&1</span></span>'
-
-    See html.test.js for more examples.
-
-    Requirements:
-    - For each block of the command, there must be exactly one "block content
-      marker" of the form '&<number>' where <number> is the 0-based index of the
-      block. (Like the LaTeX \newcommand syntax, but with a 0-based rather than
-      1-based index, because JavaScript because C because Dijkstra.)
-    - The block content marker must be the sole contents of the containing
-      element, there can't even be surrounding whitespace, or else we can't
-      guarantee sticking to within the bounds of the block content marker when
-      mucking with the HTML DOM.
-    - The HTML not only must be well-formed HTML (of course), but also must
-      conform to the XHTML requirements on tags, specifically all tags must
-      either be self-closing (like '<br/>') or come in matching pairs.
-      Close tags are never optional.
-
-    Note that &<number> isn't well-formed HTML; if you wanted a literal '&123',
-    your HTML template would have to have '&amp;123'.
-  */
-  _.numBlocks = function() {
-    var matches = this.htmlTemplate.match(/&\d+/g);
-    return matches ? matches.length : 0;
-  };
-
   _.html = function() {
     // Render the entire math subtree rooted at this command, as HTML.
     // Expects .createBlocks() to have been called already, since it uses the
