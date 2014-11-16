@@ -2,6 +2,12 @@
  * Abstract classes of unit blocks and commands.
  ************************************************/
 
+/* Note:
+ * - though we implement `.latex` in a few places, it always aliases `.text`,
+ *   which returns a textual representation of th node. I believe the only
+ *   place this is used is when the user selects some part of the unit tree.
+ */
+
 /* Universal unit write handler.
  *
  * Called by UnitBlock::write and UnitSup::finalizeTree.
@@ -78,6 +84,7 @@ var UnitCommand = P(UnitElement, function(_, super_) {
     });
   };
 
+  /*
   _.parser = function() {
     var block = latexMathParser.block;
     var self = this;
@@ -92,6 +99,7 @@ var UnitCommand = P(UnitElement, function(_, super_) {
       return self;
     });
   };
+ */
 
   // createLeftOf(cursor) and the methods it calls
   _.createLeftOf = function(cursor) {
@@ -305,6 +313,7 @@ var UnitBlock = P(UnitElement, function(_, super_) {
 });
 
 var RootUnitBlock = P(UnitBlock, RootBlockMixin);
+
 MathQuill.UnitField = APIFnFor(P(EditableField, function(_, super_) {
   _.init = function(el, opts) {
     el.addClass('mq-editable-field mq-math-mode');

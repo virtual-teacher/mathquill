@@ -11,13 +11,15 @@ var UnitChar = P(UnitCommand, function(_, super_) {
       super_.init.call(this);
   };
 
+  /*
   _.parser = function() {
       return Parser.succeed(this);
   };
+  */
 
-  _.numBlocks = function() {
-      return 0;
-  };
+//   _.numBlocks = function() {
+//       return 0;
+//   };
 
   _.createBlocks = noop;
 
@@ -28,13 +30,13 @@ var UnitChar = P(UnitCommand, function(_, super_) {
   };
 
   _.latex = _.text = function() {
-    return this.name;
+      return this.name;
   };
 
   // _.finalizeTree = _.siblingDeleted = _.siblingCreated = noop;
 
   _.replaces = function(replacedFragment) {
-    replacedFragment.remove();
+      replacedFragment.remove();
   };
 
   _.moveTowards = function(dir, cursor) {
@@ -44,7 +46,7 @@ var UnitChar = P(UnitCommand, function(_, super_) {
   };
 
   _.deleteTowards = function(dir, cursor) {
-    cursor[dir] = this.remove()[dir];
+      cursor[dir] = this.remove()[dir];
   };
 
   _.seek = function(pageX, cursor) {
@@ -63,13 +65,25 @@ var UnitChar = P(UnitCommand, function(_, super_) {
   };
 });
 
+/*
 var UnitNumber = P(UnitChar, function(_, super_) {
+    _.react = function() {
+        return React.DOM.span({
+            "data-mathquill-block-id": this.id,
+        }, this.name);
+    };
+
+    _.focus = noop;
+    _.blur = noop;
+    _.finalizeTree = _.siblingDeleted = _.siblingCreated = noop;
 });
+*/
 
 var UnitLetter = P(UnitChar, function(_, super_) {
   _.finalizeTree = _.siblingDeleted = _.siblingCreated = function(opts, dir) {
-    // don't auto-un-italicize if the sibling to my right changed (dir === R or
-    // undefined) and it's now a UnitLetter, it will un-italicize everyone
+      // XXX what does this mean?
+    // don't merge if the sibling to my right changed (dir === R or
+    // undefined) and it's now a UnitLetter, it will merge everyone
     if (dir !== L && this[R] instanceof UnitLetter) {
         return;
     }

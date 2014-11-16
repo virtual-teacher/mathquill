@@ -14,6 +14,10 @@ function classesAmongAncestors(cursor, classes) {
     return false;
 }
 
+// XXX only allow nats up here
+var UnitExp = P(UnitBlock, function(_, super_) {
+});
+
 var UnitSup = UnitCmds["^"] = P(UnitCommand, function(_, super_) {
 
   _.react = function() {
@@ -21,27 +25,22 @@ var UnitSup = UnitCmds["^"] = P(UnitCommand, function(_, super_) {
             className: "mq-supsub mq-non-leaf mq-sup-only",
             "data-mathquill-command-id": this.id,
           },
-          React.DOM.span({className: "mq-sup"}, this.blocks[0].react())
+          React.DOM.span({className: "mq-sup"}, this.sup.react())
       );
   };
 
+  /*
   _.numBlocks = function() {
       return 0;
   };
+  */
 
   _.textTemplate = [ '^' ];
 
-  // XXX this should not be a block - we only allow nats up here
   _.createBlocks = function() {
-      var block = UnitBlock();
-      block.adopt(this, this.ends[R], 0);
-      this.blocks = [block];
+      this.sup = UnitExp();
+      this.sup.adopt(this, this.ends[R], 0);
   };
-
-  // _.createBlocks = function() {
-  //     this.sup = UnitNumber();
-  //     this.sup.adopt(this, this.ends[R], 0);
-  // };
 
   _.createLeftOf = function(cursor) {
     // don't create the superscript if there's nothing to the left of the
@@ -86,9 +85,9 @@ var UnitLiveFraction = UnitCmds['/'] = P(UnitCommand, function(_, super_) {
       );
   };
 
-  _.numBlocks = function() {
-      return 2;
-  };
+//   _.numBlocks = function() {
+//       return 2;
+//   };
 
   _.textTemplate = ['(', '/', ')'];
 
