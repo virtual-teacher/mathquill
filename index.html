@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8'>
+        <title>Structured Input Test Page</title>
+    </head>
+    <body>
+        <div id="inject"></div>
+        <script src="/live-build/structured-input.js"></script>
+        <script>
+            var str = "f(x) = \\int_{-\\infty}^\\infty \\hat f(\\xi)\\,e^{2 \\pi i \\xi x}\\,d\\xi";
+            StructuredInput(str, document.getElementById("inject"));
+        </script>
+    </body>
+</html>
