@@ -142,7 +142,6 @@ Node.open(function(_) {
       return;
     }
     e.preventDefault();
-    ctrlr.scrollHoriz();
   };
 
   _.moveOutOf = // called by Controller::escapeDir, moveDir
