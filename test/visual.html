@@ -31,6 +31,7 @@ td {
   overflow: visible;
 }
 .show-textareas .mq-textarea textarea {
+  font-size: inherit;
   clip: auto !important;
   resize: auto !important;
   height: auto !important;
@@ -49,7 +50,7 @@ td {
 }
 
 #overflow-test {
-  width: 8em;
+  width: 100px;
 }
 
 </style>
@@ -80,7 +81,7 @@ td {
 
 <h3>Redrawing</h3>
 <p>
-  <span id="redrawing-test">\sqrt{_0^1}</span>
+  <span id="reflowing-test">\sqrt{_0^1}</span>
   should look the same as
   <span class="mathquill-static-math">
     \sqrt{\pi\sqrt\sqrt\frac12\int_0^1}
@@ -89,47 +90,35 @@ td {
 <script type="text/javascript">
   $(function() {
     var count = 0;
-    MathQuill.MathField($('#redrawing-test')[0], {
-      handlers: { edited: function() { count += 1; } }, // also test 'edited' hook
+    MathQuill.MathField($('#reflowing-test')[0], {
+      handlers: { edit: function() { count += 1; } }, // also test 'edit' hook
     }).focus().moveToLeftEnd().keystroke('Right');
-    var textarea = $('#redrawing-test textarea');
+    var textarea = $('#reflowing-test textarea');
     var oldcount = count;
     // paste some stuff that needs resizing
     textarea.trigger('paste');
     textarea.val('\\pi\\sqrt{\\sqrt{\\frac12}}\\int');
-    setTimeout(function() { if (count === oldcount) throw 'edited not called'; });
+    setTimeout(function() { if (count === oldcount) throw 'reflow not called'; });
   });
 </script>
 
 <h3>Behavior Options</h3>
 
-<p><span id="custom-behavior">x_a^b + \frac{\sqrt[n]{x}}{\frac{1}{2}}</span> Space should behave like Tab, and left and right should go through the upper block</p>
+<p><span id="custom-behavior">x_a^b + \frac{\sqrt[n]{x}}{\frac{1}{2}}</span></p>
+<p>Space should behave like Tab, left and right should go through the upper block, sums should start with <code>n=</code>, exponents should require an base, any of <code>+-=&lt;&gt;</code> should break out of an exponent, <code>pi</code>, <code>theta</code>, <code>sqrt</code>, and <code>sum</code> should all be auto-commands, but <code>only</code> should be the only auto-operator name (so <code>sin</code> etc. shouldn't automatically become non-italicized).</p>
 
 <script>
 $(function() {
   MathQuill.MathField($('#custom-behavior')[0], {
     spaceBehavesLikeTab: true,
-    leftRightIntoCmdGoes: 'up'
-  });
-});
-</script>
-
-<p>Basic Math: backslash <code>\</code> and dollar <code>$</code> aren't special <span id="basic"></span>
-<br/><textarea id="basic-latex"></textarea>
-
-<script>
-$(function() {
-  var latex = $('#basic-latex').on('keydown keypress', function() {
-    var prev = latex.val();
-    setTimeout(function() {
-      var now = latex.val();
-      if (now !== prev) mq.latex(now);
-    });
-  });
-  var mq = MathQuillBasic.MathField($('#basic')[0], {
-    handlers: { edited: function(mq) {
-      if (!latex.is(':focus')) latex.val(mq.latex());
-    } }
+    leftRightIntoCmdGoes: 'up',
+    restrictMismatchedBrackets: true,
+    sumStartsWithNEquals: true,
+    supSubsRequireOperand: true,
+    charsThatBreakOutOfSupSub: '+-=<>',
+    autoSubscriptNumerals: true,
+    autoCommands: 'pi theta sqrt sum',
+    autoOperatorNames: 'only'
   });
 });
 </script>
@@ -149,11 +138,22 @@ $(function() {
 <h3>Horizontal overflow</h3>
 
 <p>
-<span id="overflow-test" class="mathquill-math-field">
+<span id="overflow-test">
   \frac{d}{dx}\sqrt{x}=\frac{d}{dx}x^{\frac{1}{2}}=\frac{1}{2}x^{-\frac{1}{2}}=\frac{1}{2\sqrt{x}}
 </span>
 (for comparison: <input value="\frac{d}{dx}\sqrt{x}=\frac{d}{dx}x^{\frac{1}{2}}=\frac{1}{2}x^{-\frac{1}{2}}=\frac{1}{2\sqrt{x}}"/>)
 </p>
+
+<script>
+$(function() {
+  var overflowTest = $('#overflow-test');
+  MathQuill.MathField(overflowTest[0]);
+  var width = overflowTest.outerWidth(true);
+  if (width !== 102) {
+    throw 'math field '+width+'px wide instead of 102px';
+  }
+});
+</script>
 
 <h3>Selection Tests</h3>
 
@@ -175,8 +175,8 @@ $(function() {
   <td><span>\frac{ \text{apples} }{ \text{oranges} } = \text{NaN}</span>
   <td><span>\frac{ \text{apples} }{ \text{oranges} } = \text{NaN}</span>
 </table>
-<table id="dynamic-redraw">
-<tr><th colspan=3><code>MathQuill(...).redraw()</code>
+<table id="dynamic-reflow">
+<tr><th colspan=3><code>MathQuill(...).reflow()</code>
 <tr>
   <td><span>\sqrt{ \left ( \frac{x^2 + y^2}{2} \right ) } + \binom{n}{k}</span>
   <td><span>\sqrt{ \left ( \frac{x^2 + y^2}{2} \right ) } + \binom{n}{k}</span>
@@ -192,11 +192,27 @@ $(function() {
 <tr><td><span class="mathquill-static-math">-1 + +-2</span><td><span>-1 + +-2</span>
 <tr><td><span class="mathquill-static-math">\left ( n+1 \right ) + \frac{1}{\frac{n}{k}} + \binom{n}{k}</span><td><span>\left ( n+1 \right ) + \frac{1}{\frac{n}{k}} + \binom{n}{k}</span>
 <tr><td><span class="mathquill-static-math">x_{\frac{1}{\frac{2}{3}}}^{\frac{\frac{1}{2}}{3}}</span><td><span>x_{\frac{1}{\frac{2}{3}}}^{\frac{\frac{1}{2}}{3}}</span>
+<tr><td><span class="mathquill-static-math" style="font-size:14.99px">\left(\frac{\frac{\frac{1}{2}}{\frac{3}{4}}}{\frac{\frac{5}{6}}{\frac{7}{8}}}\right)</span><td><span>\left(\frac{\frac{\frac{1}{2}}{\frac{3}{4}}}{\frac{\frac{5}{6}}{\frac{7}{8}}}\right)</span>
 <tr><td><span class="mathquill-static-math" style="font-size:1.4375em">\left| a + \left| b \right| \right|</span><td><span>\left| a + \left| b \right| \right|</span>
-<tr><td><span class="mathquill-static-math" style="font-size:1.4375em">\left(\left(\left(\left(\left(\left(\left( \right)\right)\right)\right)\right)\right)\right)</span><td><span>\left(\left(\left(\left(\left(\left(\left( \right)\right)\right)\right)\right)\right)\right)</span>
 <tr><td><span class="mathquill-static-math" style="font-size:1.4375em">\sqrt{x}+\sqrt{\frac{x}{\frac{ }{\frac{ }{ }}}}+\sqrt{\frac{x}{\frac{ }{\frac{ }{\frac{ }{\frac{ }{ }}}}}}</span><td><span>\sqrt{x}+\sqrt{\frac{x}{\frac{ }{\frac{ }{ }}}}+\sqrt{\frac{x}{\frac{ }{\frac{ }{\frac{ }{\frac{ }{ }}}}}}</span>
 <tr><td><span class="mathquill-static-math">1+\sum_0^n+\sum_{i=0123}^n+\sum_0^{wordiness}</span><td><span>1+\sum_0^n+\sum_{i=0123}^n+\sum_0^{wordiness}</span>^M
+<tr><td><span class="mathquill-static-math">x\ \ \ +\ \ \ y</span><td><span>x\ \ \ +\ \ \ y</span>^M
+<tr><td><span class="mathquill-static-math">\sum _{n=0}^3\cos x</span><td><span>\sum _{n=0}^3\cos x</span>^M
 </table>
+
+<p id="paren-alignment">Parentheses vertical alignment at font sizes ranging from 10px to 24px: <button>Click Me</button></p>
+<script>
+$('#paren-alignment button').click(function() {
+  var html = '<div>';
+  for (var i = 10; i <= 24; i += 1) {
+    html += i+'px: <span class="mathquill-static-math" style="font-size:'+i+'px">\\left(\\left(\\left(\\left(\\left(\\left(\\left( \\right)\\right)\\right)\\right)\\right)\\right)\\right)+\\left(1\\right)+\\left(x\\right)+\\left(y\\right)+\\left(\\frac{1}{2}\\right)+\\left(\\frac{\\frac{1}{x}}{2}\\right)+\\left(\\frac{1}{\\frac{x}{2}}\\right)+\\left(\\frac{\\frac{\\frac{1}{2}}{\\frac{3}{4}}}{\\frac{\\frac{5}{6}}{\\frac{7}{8}}}\\right)</span><br>';
+  }
+  html += '</div>';
+  $(html).insertAfter('#paren-alignment').find('.mathquill-static-math').each(function() {
+    MathQuill.StaticMath(this);
+  });
+});
+</script>
 
 <h3>Dynamic rendering performance</h3>
 <p id="latex-render-perf">LaTeX: <textarea></textarea> <button>&rarr;</button> <span class="mathquill-math-field"></span></p>
@@ -239,9 +255,8 @@ window.onerror = function() {
 };
 </script>
 <script type="text/javascript" src="../build/mathquill.js"></script>
-<script type="text/javascript" src="../build/mathquill-basic.js"></script>
 <script type="text/javascript">
-window.MathQuillBasic = MathQuill.noConflict();
+MathQuill.interfaceVersion(1);
 
 $('#show-textareas-button').click(function() {
   $(document.body).toggleClass('show-textareas');
@@ -282,8 +297,8 @@ $('#dynamic-initial tr').each(function() {
   MathQuill.MathField(math[1]);
   MathQuill.MathField(math[2]).revert();
 });
-// MathQuill(...).redraw()
-$('#dynamic-redraw tr').each(function() {
+// MathQuill(...).reflow()
+$('#dynamic-reflow tr').each(function() {
   var math = $('span', this), td;
   if (!math.length) return;
 
@@ -291,13 +306,13 @@ $('#dynamic-redraw tr').each(function() {
   math.eq(0).detach();
   MathQuill.StaticMath(math[0]);
   math.eq(0).appendTo(td);
-  MathQuill(math[0]).redraw();
+  MathQuill(math[0]).reflow();
 
   td = math.eq(1).parent();
   math.eq(1).detach();
   MathQuill.MathField(math[1]);
   math.eq(1).appendTo(td);
-  MathQuill(math[1]).redraw();
+  MathQuill(math[1]).reflow();
 
   td = math.eq(2).parent();
   math.eq(2).detach();
@@ -381,7 +396,7 @@ function timeAndLog(f) {
 
 MathQuill.MathField($('#no-kbd-math')[0], {
   substituteTextarea: function() {
-    return $('<span tabindex=0 style="display:inline-block;width:1px;height:1px" />');
+    return $('<span tabindex=0 style="display:inline-block;width:1px;height:1px" />')[0];
   }
 });
 </script>

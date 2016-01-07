@@ -27,9 +27,9 @@ var TextBlock = P(Node, function(_, super_) {
     var textBlock = this;
     super_.createLeftOf.call(this, cursor);
 
-    if (textBlock[R].siblingCreated) textBlock[R].siblingCreated(L);
-    if (textBlock[L].siblingCreated) textBlock[L].siblingCreated(R);
-    textBlock.bubble('edited');
+    if (textBlock[R].siblingCreated) textBlock[R].siblingCreated(cursor.options, L);
+    if (textBlock[L].siblingCreated) textBlock[L].siblingCreated(cursor.options, R);
+    textBlock.bubble('reflow');
 
     cursor.insAtRightEnd(textBlock);
 
@@ -91,8 +91,8 @@ var TextBlock = P(Node, function(_, super_) {
     // backspace and delete at ends of block don't unwrap
     if (this.isEmpty()) cursor.insRightOf(this);
   };
-  _.write = function(cursor, ch, replacedFragment) {
-    if (replacedFragment) replacedFragment.remove();
+  _.write = function(cursor, ch) {
+    cursor.show().deleteSelection();
 
     if (ch !== '$') {
       if (!cursor[L]) TextPiece(ch).createLeftOf(cursor);
@@ -324,9 +324,9 @@ var RootMathCommand = P(MathCommand, function(_, super_) {
     super_.createBlocks.call(this);
 
     this.ends[L].cursor = this.cursor;
-    this.ends[L].write = function(cursor, ch, replacedFragment) {
+    this.ends[L].write = function(cursor, ch) {
       if (ch !== '$')
-        MathBlock.prototype.write.call(this, cursor, ch, replacedFragment);
+        MathBlock.prototype.write.call(this, cursor, ch);
       else if (this.isEmpty()) {
         cursor.insRightOf(this.parent);
         this.parent.deleteTowards(dir, cursor);
@@ -337,7 +337,7 @@ var RootMathCommand = P(MathCommand, function(_, super_) {
       else if (!cursor[L])
         cursor.insLeftOf(this.parent);
       else
-        MathBlock.prototype.write.call(this, cursor, ch, replacedFragment);
+        MathBlock.prototype.write.call(this, cursor, ch);
     };
   };
   _.latex = function() {
@@ -350,8 +350,8 @@ var RootTextBlock = P(RootMathBlock, function(_, super_) {
     if (key === 'Spacebar' || key === 'Shift-Spacebar') return;
     return super_.keystroke.apply(this, arguments);
   };
-  _.write = function(cursor, ch, replacedFragment) {
-    if (replacedFragment) replacedFragment.remove();
+  _.write = function(cursor, ch) {
+    cursor.show().deleteSelection();
     if (ch === '$')
       RootMathCommand(cursor).createLeftOf(cursor);
     else {
@@ -362,3 +362,17 @@ var RootTextBlock = P(RootMathBlock, function(_, super_) {
     }
   };
 });
+MathQuill.TextField = APIFnFor(P(EditableField, function(_) {
+  _.init = function(el) {
+    el.addClass('mq-editable-field mq-text-mode');
+    this.initRootAndEvents(RootTextBlock(), el);
+  };
+  _.latex = function(latex) {
+    if (arguments.length > 0) {
+      this.__controller.renderLatexText(latex);
+      if (this.__controller.blurred) this.__controller.cursor.hide().parent.blur();
+      return this;
+    }
+    return this.__controller.exportLatex();
+  };
+}));

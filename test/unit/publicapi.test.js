@@ -11,7 +11,7 @@ suite('Public API', function() {
     });
 
     test('MathQuill.MathField()', function() {
-      var el = $('<span>x^2</span>').appendTo('#mock');
+      var el = $('<span>x^2</span>');
       var mathField = MathQuill.MathField(el[0]);
       assert.ok(mathField instanceof MathQuill.MathField);
       assert.ok(mathField instanceof MathQuill.EditableField);
@@ -75,18 +75,18 @@ suite('Public API', function() {
 
     test('select, clearSelection', function() {
       mq.latex('n+\\frac{n}{2}');
-      assert.ok(!mq.controller.cursor.selection);
+      assert.ok(!mq.__controller.cursor.selection);
       mq.select();
-      assert.equal(mq.controller.cursor.selection.join('latex'), 'n+\\frac{n}{2}');
+      assert.equal(mq.__controller.cursor.selection.join('latex'), 'n+\\frac{n}{2}');
       mq.clearSelection();
-      assert.ok(!mq.controller.cursor.selection);
+      assert.ok(!mq.__controller.cursor.selection);
     });
 
     test('latex while there\'s a selection', function() {
       mq.latex('a');
       assert.equal(mq.latex(), 'a');
       mq.select();
-      assert.equal(mq.controller.cursor.selection.join('latex'), 'a');
+      assert.equal(mq.__controller.cursor.selection.join('latex'), 'a');
       mq.latex('b');
       assert.equal(mq.latex(), 'b');
       mq.typedText('c');
@@ -97,78 +97,154 @@ suite('Public API', function() {
       mq.latex('x+y');
       assert.equal(mq.html(), '<var>x</var><span class="mq-binary-operator">+</span><var>y</var>');
     });
+    
+    test('.text() with incomplete commands', function() {
+      assert.equal(mq.text(), '');
+      mq.typedText('\\');
+      assert.equal(mq.text(), '\\');
+      mq.typedText('s');
+      assert.equal(mq.text(), '\\s');
+      mq.typedText('qrt');
+      assert.equal(mq.text(), '\\sqrt');
+    });
+    
+    test('.text() with complete commands', function() {
+      mq.latex('\\sqrt{}');
+      assert.equal(mq.text(), 'sqrt()');
+      mq.latex('\\nthroot[]{}');
+      assert.equal(mq.text(), 'sqrt[]()');
+      mq.latex('\\frac{}{}');
+      assert.equal(mq.text(), '(/)');
+      mq.latex('\\frac{3}{5}');
+      assert.equal(mq.text(), '(3/5)');
+      mq.latex('\\div');
+      assert.equal(mq.text(), '[/]');
+      mq.latex('^{}');
+      assert.equal(mq.text(), '**');
+      mq.latex('3^{4}');
+      assert.equal(mq.text(), '3**4');
+    });
 
     test('.moveToDirEnd(dir)', function() {
       mq.latex('a x^2 + b x + c = 0');
-      assert.equal(mq.controller.cursor[L].ctrlSeq, '0');
-      assert.equal(mq.controller.cursor[R], 0);
+      assert.equal(mq.__controller.cursor[L].ctrlSeq, '0');
+      assert.equal(mq.__controller.cursor[R], 0);
       mq.moveToLeftEnd();
-      assert.equal(mq.controller.cursor[L], 0);
-      assert.equal(mq.controller.cursor[R].ctrlSeq, 'a');
+      assert.equal(mq.__controller.cursor[L], 0);
+      assert.equal(mq.__controller.cursor[R].ctrlSeq, 'a');
       mq.moveToRightEnd();
-      assert.equal(mq.controller.cursor[L].ctrlSeq, '0');
-      assert.equal(mq.controller.cursor[R], 0);
+      assert.equal(mq.__controller.cursor[L].ctrlSeq, '0');
+      assert.equal(mq.__controller.cursor[R], 0);
     });
   });
 
-  test('*OutOf handlers', function() {
-    var upCounter = 0, moveCounter = 0, dir = null, deleteCounter = 0;
-
-    var mq = MathQuill.MathField($('<span></span>').appendTo('#mock')[0], {
-      handlers: {
-        upOutOf: function() { upCounter += 1; },
-        moveOutOf: function(d) { moveCounter += 1; dir = d; },
-        deleteOutOf: function(d) { deleteCounter += 1; dir = d; }
-      }
+  suite('*OutOf handlers', function() {
+    testHandlers('MathQuill.MathField() constructor', function(options) {
+      return MathQuill.MathField($('<span></span>').appendTo('#mock')[0], options);
     });
+    testHandlers('MathQuill.MathField::config()', function(options) {
+      return MathQuill.MathField($('<span></span>').appendTo('#mock')[0]).config(options);
+    });
+    testHandlers('.config() on \\MathQuillMathField{} in a MathQuill.StaticMath', function(options) {
+      return MathQuill.MathField($('<span></span>').appendTo('#mock')[0]).config(options);
+    });
+    suite('global MathQuill.config()', function() {
+      testHandlers('a MathQuill.MathField', function(options) {
+        MathQuill.config(options);
+        return MathQuill.MathField($('<span></span>').appendTo('#mock')[0]);
+      });
+      testHandlers('\\MathQuillMathField{} in a MathQuill.StaticMath', function(options) {
+        MathQuill.config(options);
+        return MathQuill.StaticMath($('<span>\\MathQuillMathField{}</span>').appendTo('#mock')[0]).innerFields[0];
+      });
+      teardown(function() {
+        MathQuill.config({ handlers: undefined });
+      });
+    });
+    function testHandlers(title, mathFieldMaker) {
+      test(title, function() {
+        var enterCounter = 0, upCounter = 0, moveCounter = 0, deleteCounter = 0,
+          dir = null;
 
-    mq.latex('n+\\frac{n}{2}'); // starts at right edge
-    assert.equal(moveCounter, 0);
+        var mq = mathFieldMaker({
+          handlers: {
+            enter: function(_mq) {
+              assert.equal(arguments.length, 1);
+              assert.equal(_mq, mq);
+              enterCounter += 1;
+            },
+            upOutOf: function(_mq) {
+              assert.equal(arguments.length, 1);
+              assert.equal(_mq, mq);
+              upCounter += 1;
+            },
+            moveOutOf: function(_dir, _mq) {
+              assert.equal(arguments.length, 2);
+              assert.equal(_mq, mq);
+              dir = _dir;
+              moveCounter += 1;
+            },
+            deleteOutOf: function(_dir, _mq) {
+              assert.equal(arguments.length, 2);
+              assert.equal(_mq, mq);
+              dir = _dir;
+              deleteCounter += 1;
+            }
+          }
+        });
 
-    mq.keystroke('Right'); // stay at right edge
-    assert.equal(moveCounter, 1);
-    assert.equal(dir, R);
+        mq.latex('n+\\frac{n}{2}'); // starts at right edge
+        assert.equal(moveCounter, 0);
 
-    mq.keystroke('Right'); // stay at right edge
-    assert.equal(moveCounter, 2);
-    assert.equal(dir, R);
+        mq.typedText('\n'); // nothing happens
+        assert.equal(enterCounter, 1);
 
-    mq.keystroke('Left'); // right edge of denominator
-    assert.equal(moveCounter, 2);
-    assert.equal(upCounter, 0);
+        mq.keystroke('Right'); // stay at right edge
+        assert.equal(moveCounter, 1);
+        assert.equal(dir, R);
 
-    mq.keystroke('Up'); // right edge of numerator
-    assert.equal(moveCounter, 2);
-    assert.equal(upCounter, 0);
+        mq.keystroke('Right'); // stay at right edge
+        assert.equal(moveCounter, 2);
+        assert.equal(dir, R);
 
-    mq.keystroke('Up'); // stays at right edge of numerator
-    assert.equal(upCounter, 1);
+        mq.keystroke('Left'); // right edge of denominator
+        assert.equal(moveCounter, 2);
+        assert.equal(upCounter, 0);
 
-    mq.keystroke('Up'); // stays at right edge of numerator
-    assert.equal(upCounter, 2);
+        mq.keystroke('Up'); // right edge of numerator
+        assert.equal(moveCounter, 2);
+        assert.equal(upCounter, 0);
 
-    // go to left edge
-    mq.keystroke('Left').keystroke('Left').keystroke('Left').keystroke('Left');
-    assert.equal(moveCounter, 2);
+        mq.keystroke('Up'); // stays at right edge of numerator
+        assert.equal(upCounter, 1);
 
-    mq.keystroke('Left'); // stays at left edge
-    assert.equal(moveCounter, 3);
-    assert.equal(dir, L);
-    assert.equal(deleteCounter, 0);
+        mq.keystroke('Up'); // stays at right edge of numerator
+        assert.equal(upCounter, 2);
 
-    mq.keystroke('Backspace'); // stays at left edge
-    assert.equal(deleteCounter, 1);
-    assert.equal(dir, L);
+        // go to left edge
+        mq.keystroke('Left').keystroke('Left').keystroke('Left').keystroke('Left');
+        assert.equal(moveCounter, 2);
 
-    mq.keystroke('Backspace'); // stays at left edge
-    assert.equal(deleteCounter, 2);
-    assert.equal(dir, L);
+        mq.keystroke('Left'); // stays at left edge
+        assert.equal(moveCounter, 3);
+        assert.equal(dir, L);
+        assert.equal(deleteCounter, 0);
 
-    mq.keystroke('Left'); // stays at left edge
-    assert.equal(moveCounter, 4);
-    assert.equal(dir, L);
+        mq.keystroke('Backspace'); // stays at left edge
+        assert.equal(deleteCounter, 1);
+        assert.equal(dir, L);
 
-    $(mq.el()).remove();
+        mq.keystroke('Backspace'); // stays at left edge
+        assert.equal(deleteCounter, 2);
+        assert.equal(dir, L);
+
+        mq.keystroke('Left'); // stays at left edge
+        assert.equal(moveCounter, 4);
+        assert.equal(dir, L);
+
+        $('#mock').empty();
+      });
+    }
   });
 
   suite('.cmd(...)', function() {
@@ -192,14 +268,34 @@ suite('Public API', function() {
       mq.keystroke('Right Shift-Left Shift-Left Shift-Left').cmd('\\sqrt');
       assert.equal(mq.latex(), '\\sqrt{xy^2}');
     });
+
+    test('backslash commands are passed their name', function() {
+      mq.cmd('\\alpha');
+      assert.equal(mq.latex(), '\\alpha');
+    });
+
+    test('replaces selection', function() {
+      mq.typedText('49').select().cmd('\\sqrt');
+      assert.equal(mq.latex(), '\\sqrt{49}');
+    });
+
+    test('operator name', function() {
+      mq.cmd('\\sin');
+      assert.equal(mq.latex(), '\\sin');
+    });
+
+    test('nonexistent LaTeX command is noop', function() {
+      mq.typedText('49').select().cmd('\\asdf').cmd('\\sqrt');
+      assert.equal(mq.latex(), '\\sqrt{49}');
+    });
   });
 
   suite('spaceBehavesLikeTab', function() {
     var mq, rootBlock, cursor;
     test('space behaves like tab with default opts', function() {
       mq = MathQuill.MathField($('<span></span>').appendTo('#mock')[0]);
-      rootBlock = mq.controller.root;
-      cursor = mq.controller.cursor;
+      rootBlock = mq.__controller.root;
+      cursor = mq.__controller.cursor;
 
       mq.latex('\\sqrt{x}');
       mq.keystroke('Left');
@@ -220,8 +316,8 @@ suite('Public API', function() {
     test('space behaves like tab when spaceBehavesLikeTab is true', function() {
       var opts = { 'spaceBehavesLikeTab': true };
       mq = MathQuill.MathField( $('<span></span>').appendTo('#mock')[0], opts)
-      rootBlock = mq.controller.root;
-      cursor = mq.controller.cursor;
+      rootBlock = mq.__controller.root;
+      cursor = mq.__controller.cursor;
 
       mq.latex('\\sqrt{x}');
 
@@ -234,6 +330,22 @@ suite('Public API', function() {
       mq.keystroke('Shift-Spacebar');
       assert.equal(cursor[L], 0, 'left cursor is ' + cursor[L]);
       assert.equal(cursor[R], rootBlock.ends[L], 'parent of rootBlock is ' + cursor[R]);
+
+      $(mq.el()).remove();
+    });
+    test('space behaves like tab when globally set to true', function() {
+      MathQuill.config({ spaceBehavesLikeTab: true });
+
+      mq = MathQuill.MathField( $('<span></span>').appendTo('#mock')[0]);
+      rootBlock = mq.__controller.root;
+      cursor = mq.__controller.cursor;
+
+      mq.latex('\\sqrt{x}');
+
+      mq.keystroke('Left');
+      mq.keystroke('Spacebar');
+      assert.equal(cursor.parent, rootBlock, 'cursor in root block');
+      assert.equal(cursor[R], 0, 'cursor at end of block');
 
       $(mq.el()).remove();
     });
@@ -514,6 +626,51 @@ suite('Public API', function() {
         mq.keystroke('Right Right').typedText('4');
         assert.equal(mq.latex(), '1\\sqrt[2n]{3x}4');
       });
+    });
+  });
+
+  suite('sumStartsWithNEquals', function() {
+    test('sum defaults to empty limits', function() {
+      var mq = MathQuill.MathField($('<span>').appendTo('#mock')[0]);
+      assert.equal(mq.latex(), '');
+
+      mq.cmd('\\sum');
+      assert.equal(mq.latex(), '\\sum_{ }^{ }');
+
+      mq.cmd('n');
+      assert.equal(mq.latex(), '\\sum_n^{ }', 'cursor in lower limit');
+
+      $(mq.el()).remove();
+    });
+    test('sum starts with `n=`', function() {
+      var mq = MathQuill.MathField($('<span>').appendTo('#mock')[0], {
+        sumStartsWithNEquals: true
+      });
+      assert.equal(mq.latex(), '');
+
+      mq.cmd('\\sum');
+      assert.equal(mq.latex(), '\\sum_{n=}^{ }');
+
+      mq.cmd('0');
+      assert.equal(mq.latex(), '\\sum_{n=0}^{ }', 'cursor after the `n=`');
+
+      $(mq.el()).remove();
+    });
+  });
+
+  suite('substituteTextarea', function() {
+    test('doesn\'t blow up on selection', function() {
+      var mq = MathQuill.MathField($('<span>').appendTo('#mock')[0], {
+        substituteTextarea: function() {
+          return $('<span tabindex=0 style="display:inline-block;width:1px;height:1px" />')[0];
+        }
+      });
+
+      assert.equal(mq.latex(), '');
+      mq.write('asdf');
+      mq.select();
+
+      $(mq.el()).remove();
     });
   });
 });

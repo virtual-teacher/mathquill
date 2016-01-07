@@ -48,7 +48,7 @@ suite('SupSub', function() {
             doTo(mq, cmd);
             assert.equal(mq.latex().replace(/ /g, ''), expected);
 
-            prayWellFormedPoint(mq.controller.cursor);
+            prayWellFormedPoint(mq.__controller.cursor);
 
             mq.typedText('c');
             assert.equal(mq.latex().replace(/ /g, ''), expectedAfterC);
@@ -87,7 +87,7 @@ suite('SupSub', function() {
           doTo(mq);
           assert.equal(mq.latex().replace(/ /g, ''), expected);
 
-          prayWellFormedPoint(mq.controller.cursor);
+          prayWellFormedPoint(mq.__controller.cursor);
 
           mq.typedText('c');
           assert.equal(mq.latex().replace(/ /g, ''), expectedAfterC);
@@ -158,10 +158,10 @@ suite('SupSub', function() {
       assert.equal(mq.latex(), 'x_a^b');
 
       mq.keystroke('Left Backspace');
-      assert.equal(mq.latex(), 'xb_a');
+      assert.equal(mq.latex(), 'x_ab');
 
       mq.typedText('c');
-      assert.equal(mq.latex(), 'xcb_a');
+      assert.equal(mq.latex(), 'x_acb');
     });
   });
 });

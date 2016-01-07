@@ -23,112 +23,136 @@ MathQuill.noConflict = function() {
   window.MathQuill = origMathQuill;
   return MathQuill;
 };
-var origMathQuill = window.MathQuill;
-window.MathQuill = MathQuill;
 
 /**
- * Publicly export functions that MathQuill-ify an HTML element and return an
- * API object. If it had already been MathQuill-ified into the same kind, return
- * the original API object (if different or not an HTML element, null).
- *
- * Always returns either an instance of itself, or null.
+ * Returns function (to be publicly exported) that MathQuill-ifies an HTML
+ * element and returns an API object. If the element had already been MathQuill-
+ * ified into the same kind, return the original API object (if different kind
+ * or not an HTML element, null).
  */
-function setMathQuillDot(name, API) {
-  MathQuill[name] = function(el, opts) {
+function APIFnFor(APIClass) {
+  function APIFn(el, opts) {
     var mq = MathQuill(el);
-    if (mq instanceof API || !el || !el.nodeType) return mq;
-    return API($(el), opts);
-  };
-  MathQuill[name].prototype = API.prototype;
+    if (mq instanceof APIClass || !el || !el.nodeType) return mq;
+    return APIClass($(el), opts);
+  }
+  APIFn.prototype = APIClass.prototype;
+  return APIFn;
 }
+
+var Options = P(), optionProcessors = {};
+MathQuill.__options = Options.p;
 
 var AbstractMathQuill = P(function(_) {
   _.init = function() { throw "wtf don't call me, I'm 'abstract'"; };
   _.initRoot = function(root, el, opts) {
-    root.jQ = $('<span class="mq-root-block"/>').attr(mqBlockId, root.id)
-      .appendTo(el);
-    var ctrlr = this.controller = root.controller = Controller(root, el, opts);
-    ctrlr.API = this;
-    root.cursor = ctrlr.cursor; // TODO: stop depending on root.cursor, and rm it
+    this.__options = Options();
+    this.config(opts);
+
+    var ctrlr = Controller(this, root, el);
     ctrlr.createTextarea();
-  };
-  _.initExtractContents = function(el) {
+
     var contents = el.contents().detach();
+    root.jQ =
+      $('<span class="mq-root-block"/>').attr(mqBlockId, root.id).appendTo(el);
+    this.latex(contents.text());
+
     this.revert = function() {
       return el.empty().unbind('.mathquill')
       .removeClass('mq-editable-field mq-math-mode mq-text-mode')
       .append(contents);
     };
-    return contents.text();
   };
-  _.el = function() { return this.controller.container[0]; };
-  _.text = function() { return this.controller.exportText(); };
+  _.config =
+  MathQuill.config = function(opts) {
+    for (var opt in opts) if (opts.hasOwnProperty(opt)) {
+      var optVal = opts[opt], processor = optionProcessors[opt];
+      this.__options[opt] = (processor ? processor(optVal) : optVal);
+    }
+    return this;
+  };
+  _.el = function() { return this.__controller.container[0]; };
+  _.text = function() { return this.__controller.exportText(); };
   _.latex = function(latex) {
     if (arguments.length > 0) {
-      this.controller.renderLatexMath(latex);
-      if (this.controller.blurred) this.controller.cursor.hide().parent.blur();
+      this.__controller.renderLatexMath(latex);
+      if (this.__controller.blurred) this.__controller.cursor.hide().parent.blur();
       return this;
     }
-    return this.controller.exportLatex();
+    return this.__controller.exportLatex();
   };
   _.html = function() {
-    return this.controller.root.jQ.html()
+    return this.__controller.root.jQ.html()
       .replace(/ mathquill-(?:command|block)-id="?\d+"?/g, '')
       .replace(/<span class="?mq-cursor( mq-blink)?"?>.?<\/span>/i, '')
       .replace(/ mq-hasCursor|mq-hasCursor ?/, '')
       .replace(/ class=(""|(?= |>))/g, '');
   };
-  _.redraw = function() {
-    this.controller.root.postOrder('edited');
+  _.reflow = function() {
+    this.__controller.root.postOrder('reflow');
     return this;
   };
 });
 MathQuill.prototype = AbstractMathQuill.prototype;
 
-setMathQuillDot('StaticMath', P(AbstractMathQuill, function(_) {
+MathQuill.StaticMath = APIFnFor(P(AbstractMathQuill, function(_, super_) {
   _.init = function(el) {
-    var contents = this.initExtractContents(el);
     this.initRoot(MathBlock(), el.addClass('mq-math-mode'));
-    this.controller.renderLatexMath(contents);
-    this.controller.delegateMouseEvents();
-    this.controller.staticMathTextareaEvents();
+    this.__controller.delegateMouseEvents();
+    this.__controller.staticMathTextareaEvents();
+  };
+  _.latex = function() {
+    var returned = super_.latex.apply(this, arguments);
+    if (arguments.length > 0) {
+      this.__controller.root.postOrder('registerInnerField', this.innerFields = []);
+    }
+    return returned;
   };
 }));
 
 var EditableField = MathQuill.EditableField = P(AbstractMathQuill, function(_) {
-  _.initEvents = function() {
-    this.controller.editable = true;
-    this.controller.delegateMouseEvents();
-    this.controller.editablesTextareaEvents();
+  _.initRootAndEvents = function(root, el, opts) {
+    this.initRoot(root, el, opts);
+    this.__controller.editable = true;
+    this.__controller.delegateMouseEvents();
+    this.__controller.editablesTextareaEvents();
   };
-  _.focus = function() { this.controller.textarea.focus(); return this; };
-  _.blur = function() { this.controller.textarea.blur(); return this; };
+  _.focus = function() { this.__controller.textarea.focus(); return this; };
+  _.blur = function() { this.__controller.textarea.blur(); return this; };
   _.write = function(latex) {
-    this.controller.writeLatex(latex);
-    if (this.controller.blurred) this.controller.cursor.hide().parent.blur();
+    this.__controller.writeLatex(latex);
+    if (this.__controller.blurred) this.__controller.cursor.hide().parent.blur();
     return this;
   };
   _.cmd = function(cmd) {
-    var ctrlr = this.controller.notify(), cursor = ctrlr.cursor.show(),
-      seln = cursor.replaceSelection();
-    if (/^\\[a-z]+$/i.test(cmd)) cursor.insertCmd(cmd.slice(1), seln);
-    else cursor.parent.write(cursor, cmd, seln);
+    var ctrlr = this.__controller.notify(), cursor = ctrlr.cursor;
+    if (/^\\[a-z]+$/i.test(cmd)) {
+      cmd = cmd.slice(1);
+      var klass = LatexCmds[cmd];
+      if (klass) {
+        cmd = klass(cmd);
+        if (cursor.selection) cmd.replaces(cursor.replaceSelection());
+        cmd.createLeftOf(cursor.show());
+      }
+      else /* TODO: API needs better error reporting */;
+    }
+    else cursor.parent.write(cursor, cmd);
     if (ctrlr.blurred) cursor.hide().parent.blur();
     return this;
   };
   _.select = function() {
-    var ctrlr = this.controller;
+    var ctrlr = this.__controller;
     ctrlr.notify('move').cursor.insAtRightEnd(ctrlr.root);
     while (ctrlr.cursor[L]) ctrlr.selectLeft();
     return this;
   };
   _.clearSelection = function() {
-    this.controller.cursor.clearSelection();
+    this.__controller.cursor.clearSelection();
     return this;
   };
 
   _.moveToDirEnd = function(dir) {
-    this.controller.notify('move').cursor.insAtDirEnd(dir, this.controller.root);
+    this.__controller.notify('move').cursor.insAtDirEnd(dir, this.__controller.root);
     return this;
   };
   _.moveToLeftEnd = function() { return this.moveToDirEnd(L); };
@@ -137,56 +161,59 @@ var EditableField = MathQuill.EditableField = P(AbstractMathQuill, function(_) {
   _.keystroke = function(keys) {
     var keys = keys.replace(/^\s+|\s+$/g, '').split(/\s+/);
     for (var i = 0; i < keys.length; i += 1) {
-      this.controller.keystroke(keys[i], { preventDefault: noop });
+      this.__controller.keystroke(keys[i], { preventDefault: noop });
     }
     return this;
   };
   _.typedText = function(text) {
-    for (var i = 0; i < text.length; i += 1) this.controller.typedText(text.charAt(i));
+    for (var i = 0; i < text.length; i += 1) this.__controller.typedText(text.charAt(i));
     return this;
   };
 });
 
 function RootBlockMixin(_) {
-  _.handlers = {};
-  _.setHandlers = function(handlers, extraArg) {
-    if (!handlers) return;
-    this.handlers = handlers;
-    this.extraArg = extraArg; // extra context arg for handlers
-  };
-
-  var names = 'moveOutOf deleteOutOf selectOutOf upOutOf downOutOf edited'.split(' ');
+  var names = 'moveOutOf deleteOutOf selectOutOf upOutOf downOutOf'.split(' ');
   for (var i = 0; i < names.length; i += 1) (function(name) {
-    _[name] = (i < 3
-      ? function(dir) { if (this.handlers[name]) this.handlers[name](dir, this.extraArg); }
-      : function() { if (this.handlers[name]) this.handlers[name](this.extraArg); });
+    _[name] = function(dir) { this.controller.handle(name, dir); };
   }(names[i]));
+  _.reflow = function() {
+    this.controller.handle('reflow');
+    this.controller.handle('edited');
+    this.controller.handle('edit');
+  };
 }
 
-setMathQuillDot('MathField', P(EditableField, function(_, super_) {
-  _.init = function(el, opts) {
-    var contents = this.initExtractContents(el);
-    el.addClass('mq-editable-field mq-math-mode');
-    this.initRoot(RootMathBlock(), el, opts);
-    this.controller.root.setHandlers(opts && opts.handlers, this);
-    this.controller.renderLatexMath(contents);
-    this.initEvents();
-  };
-}));
-setMathQuillDot('TextField', P(EditableField, function(_) {
-  _.init = function(el) {
-    var contents = this.initExtractContents(el);
-    el.addClass('mq-editable-field mq-text-mode');
-    this.initRoot(RootTextBlock(), el);
-    this.controller.renderLatexText(contents);
-    this.initEvents();
-  };
-  _.latex = function(latex) {
-    if (arguments.length > 0) {
-      this.controller.renderLatexText(latex);
-      if (this.controller.blurred) this.controller.cursor.hide().parent.blur();
-      return this;
-    }
-    return this.controller.exportLatex();
-  };
-}));
+/**
+ * Interface Versioning (#459) to allow us to virtually guarantee backcompat.
+ * v0.10.x introduces it, so for now, don't completely break the API before
+ * MathQuill.interfaceVersion(1) is called, just complain with console.warn().
+ *
+ * .noConflict() is shimmed here directly because it needs to be modified,
+ * the rest are shimmed in outro.js so that MathQuill.MathField.prototype etc
+ * can be accessed (same reason this is at the end of publicapi.js, so that
+ * MathQuill.prototype can be accessed).
+ */
+function insistOnInterVer() {
+  if (window.console) console.warn(
+    'Please call MathQuill.interfaceVersion(1) before doing anything else ' +
+    'with the MathQuill API. This will be required starting v1.0.0.'
+  );
+}
+function preInterVerMathQuill(el) {
+  insistOnInterVer();
+  return MathQuill(el);
+};
+preInterVerMathQuill.prototype = MathQuill.prototype;
+
+preInterVerMathQuill.interfaceVersion = function(v) {
+  if (v !== 1) throw 'Only interface version 1 supported. You specified: ' + v;
+  return window.MathQuill = MathQuill;
+};
+
+preInterVerMathQuill.noConflict = function() {
+  insistOnInterVer();
+  window.MathQuill = origMathQuill;
+  return preInterVerMathQuill;
+};
+var origMathQuill = window.MathQuill;
+window.MathQuill = preInterVerMathQuill;

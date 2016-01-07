@@ -8,21 +8,23 @@
  * Both MathBlock's and MathCommand's descend from it.
  */
 var MathElement = P(Node, function(_, super_) {
-  _.finalizeInsert = function(cursor) {
+  _.finalizeInsert = function(options, cursor) { // `cursor` param is only for
+      // SupSub::contactWeld, and is deliberately only passed in by writeLatex,
+      // see ea7307eb4fac77c149a11ffdf9a831df85247693
     var self = this;
-    self.postOrder('finalizeTree');
+    self.postOrder('finalizeTree', options);
     self.postOrder('contactWeld', cursor);
 
     // note: this order is important.
     // empty elements need the empty box provided by blur to
     // be present in order for their dimensions to be measured
-    // correctly by 'edited' handlers.
+    // correctly by 'reflow' handlers.
     self.postOrder('blur');
 
-    self.postOrder('edited');
-    if (self[R].siblingCreated) self[R].siblingCreated(L);
-    if (self[L].siblingCreated) self[L].siblingCreated(R);
-    self.bubble('edited');
+    self.postOrder('reflow');
+    if (self[R].siblingCreated) self[R].siblingCreated(options, L);
+    if (self[L].siblingCreated) self[L].siblingCreated(options, R);
+    self.bubble('reflow');
   };
 });
 
@@ -77,7 +79,7 @@ var MathCommand = P(MathElement, function(_, super_) {
       replacedFragment.adopt(cmd.ends[L], 0, 0);
       replacedFragment.jQ.appendTo(cmd.ends[L].jQ);
     }
-    cmd.finalizeInsert();
+    cmd.finalizeInsert(cursor.options);
     cmd.placeCursor(cursor);
   };
   _.createBlocks = function() {
@@ -106,9 +108,8 @@ var MathCommand = P(MathElement, function(_, super_) {
     cursor.insAtDirEnd(-dir, updownInto || this.ends[-dir]);
   };
   _.deleteTowards = function(dir, cursor) {
-    cursor.startSelection();
-    this.selectTowards(dir, cursor);
-    cursor.select();
+    if (this.isEmpty()) cursor[dir] = this.remove()[dir];
+    else this.moveTowards(dir, cursor, null);
   };
   _.selectTowards = function(dir, cursor) {
     cursor[-dir] = this;
@@ -355,14 +356,14 @@ var MathBlock = P(MathElement, function(_, super_) {
   _.html = function() { return this.join('html'); };
   _.latex = function() { return this.join('latex'); };
   _.text = function() {
-    return this.ends[L] === this.ends[R] ?
+    return (this.ends[L] === this.ends[R] && this.ends[L] !== 0) ?
       this.ends[L].text() :
-      '(' + this.join('text') + ')'
+      this.join('text')
     ;
   };
 
   _.keystroke = function(key, e, ctrlr) {
-    if (ctrlr.options.spaceBehavesLikeTab
+    if (ctrlr.API.__options.spaceBehavesLikeTab
         && (key === 'Spacebar' || key === 'Shift-Spacebar')) {
       e.preventDefault();
       ctrlr.escapeDir(key === 'Shift-Spacebar' ? L : R, key, e);
@@ -394,18 +395,22 @@ var MathBlock = P(MathElement, function(_, super_) {
     while (pageX < node.jQ.offset().left) node = node[L];
     return node.seek(pageX, cursor);
   };
-  _.write = function(cursor, ch, replacedFragment) {
-    var cmd;
-    if (ch.match(/^[a-eg-zA-Z]$/)) //exclude f because want florin
-      cmd = Letter(ch);
-    else if (cmd = CharCmds[ch] || LatexCmds[ch])
-      cmd = cmd(ch);
+  _.chToCmd = function(ch) {
+    var cons;
+    // exclude f because it gets a dedicated command with more spacing
+    if (ch.match(/^[a-eg-zA-Z]$/))
+      return Letter(ch);
+    else if (/^\d$/.test(ch))
+      return Digit(ch);
+    else if (cons = CharCmds[ch] || LatexCmds[ch])
+      return cons(ch);
     else
-      cmd = VanillaSymbol(ch);
-
-    if (replacedFragment) cmd.replaces(replacedFragment);
-
-    cmd.createLeftOf(cursor);
+      return VanillaSymbol(ch);
+  };
+  _.write = function(cursor, ch) {
+    var cmd = this.chToCmd(ch);
+    if (cursor.selection) cmd.replaces(cursor.replaceSelection());
+    cmd.createLeftOf(cursor.show());
   };
 
   _.focus = function() {
@@ -424,3 +429,9 @@ var MathBlock = P(MathElement, function(_, super_) {
 });
 
 var RootMathBlock = P(MathBlock, RootBlockMixin);
+MathQuill.MathField = APIFnFor(P(EditableField, function(_, super_) {
+  _.init = function(el, opts) {
+    el.addClass('mq-editable-field mq-math-mode');
+    this.initRootAndEvents(RootMathBlock(), el, opts);
+  };
+}));

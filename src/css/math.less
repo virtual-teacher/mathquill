@@ -1,3 +1,12 @@
+.mq-root-block, .mq-math-mode .mq-root-block {
+  .inline-block;
+  width: 100%;
+  padding: 2px;
+  .box-sizing(border-box); // supported by IE8+: http://caniuse.com/css3-boxsizing
+  white-space: nowrap;
+  overflow: hidden;
+  vertical-align: middle;
+}
 .mq-math-mode {
   font-variant: normal;
   font-weight: normal;
@@ -23,6 +32,7 @@
     padding: 0;
     border-color: black;
     .user-select(none);
+    box-sizing: border-box;
   }
 
   // TODO: what's the difference between these?
@@ -60,11 +70,13 @@
     font-style: italic;
   }
 
-  var.mq-florin {
-    .inline-block;
-    width: .3em;
-    position: relative;
-    left: -.1em;
+  var.mq-f {
+    margin-right: 0.1em;
+    margin-left: 0.1em;
+  }
+
+  .mq-roman var.mq-f {
+    margin: 0;
   }
 
   big {
@@ -122,7 +134,7 @@
 
       .mq-sup {
         display: inline-block;
-        vertical-align: bottom;
+        vertical-align: text-bottom;
       }
     }
 
@@ -146,15 +158,6 @@
     // within sup/sub.
     .mq-fraction {
       font-size: 70%;
-      vertical-align: -0.4em;
-    }
-
-    .mq-numerator {
-      padding-bottom: 0;
-    }
-
-    .mq-denominator {
-      padding-top: 0;
     }
   }
 
@@ -170,12 +173,12 @@
   // parentheses
   .mq-paren {
     padding: 0 .1em;
-    vertical-align: bottom;
-    -webkit-transform-origin: bottom center;
-    -moz-transform-origin: bottom center;
-    -ms-transform-origin: bottom center;
-    -o-transform-origin: bottom center;
-    transform-origin: bottom center;
+    vertical-align: top;
+    -webkit-transform-origin: center .06em;
+    -moz-transform-origin: center .06em;
+    -ms-transform-origin: center .06em;
+    -o-transform-origin: center .06em;
+    transform-origin: center .06em;
 
     &.mq-ghost { color: silver; }
 
@@ -195,17 +198,17 @@
   }
 
   ////
-  // un-italicized functions
+  // non-italicized operator names
   // like \sin, \cos, \ln, etc.
-  .mq-un-italicized {
+  .mq-operator-name {
     font-family: Symbola, "Times New Roman", serif;
     line-height: .9;
     font-style: normal;
   }
-  var.mq-un-italicized.mq-first {
+  var.mq-operator-name.mq-first {
     padding-left: .2em;
   }
-  var.mq-un-italicized.mq-last {
+  var.mq-operator-name.mq-last {
     padding-right: .2em;
   }
 
@@ -218,7 +221,7 @@
   .mq-fraction {
     font-size: 90%;
     text-align: center;
-    vertical-align: -.5em;
+    vertical-align: -.4em;
     padding: 0 .2em;
   }
 
@@ -239,16 +242,13 @@
 
   .mq-numerator {
     padding: 0 0.1em;
-    margin-bottom: -0.1em;
   }
 
   .mq-denominator {
     border-top: 1px solid;
     float: right; // take out of normal flow to manipulate baseline
     width: 100%;
-    padding: .1em .1em 0 .1em;
-    margin-right: -.1em;
-    margin-left: -.1em;
+    padding: 0.1em;
   }
 
   ////
@@ -257,7 +257,7 @@
   .mq-sqrt-prefix {
     padding-top: 0;
     position: relative;
-    top: .1em;
+    top: 0.1em;
     vertical-align: top;
     .transform-origin(top);
   }
@@ -268,6 +268,7 @@
     padding-left: .15em;
     padding-right: .2em;
     margin-right: .1em;
+    padding-top: 1px;
   }
 
   .mq-vector-prefix {

@@ -4,10 +4,17 @@
  ********************************************/
 
 Controller.open(function(_) {
+  Options.p.substituteTextarea = function() {
+    return $('<textarea autocapitalize=off autocomplete=off autocorrect=off ' +
+               'spellcheck=false x-palm-disable-ste-all=true />')[0];
+  };
   _.createTextarea = function() {
     var textareaSpan = this.textareaSpan = $('<span class="mq-textarea"></span>'),
-      fn = this.options.substituteTextarea, textarea = this.textarea =
-        $(fn ? fn() : '<textarea/>').appendTo(textareaSpan);
+      textarea = this.API.__options.substituteTextarea();
+    if (!textarea.nodeType) {
+      throw 'substituteTextarea() must return a DOM element, got ' + textarea;
+    }
+    textarea = this.textarea = $(textarea).appendTo(textareaSpan);
 
     var ctrlr = this;
     ctrlr.cursor.selectionChanged = function() { ctrlr.selectionChanged(); };
@@ -31,7 +38,7 @@ Controller.open(function(_) {
     var latex = '';
     if (this.cursor.selection) {
       latex = this.cursor.selection.join('latex');
-      if (this.options.statelessClipboard) {
+      if (this.API.__options.statelessClipboard) {
         // FIXME: like paste, only this works for math fields; should ask parent
         latex = '$' + latex + '$';
       }
@@ -71,27 +78,26 @@ Controller.open(function(_) {
       if (cursor.selection) {
         setTimeout(function() {
           ctrlr.notify('edit'); // deletes selection if present
-          cursor.parent.bubble('edited');
+          cursor.parent.bubble('reflow');
         });
       }
     });
 
     this.focusBlurEvents();
   };
-  var disabledChars = '';
-  MathQuill.disableCharsWithoutOperand = function(c) { disabledChars += c; };
   _.typedText = function(ch) {
-    if (!this.cursor[L] && disabledChars.indexOf(ch) > -1) return;
-    if (ch === '\n') {
-      if (this.root.handlers.enter) this.root.handlers.enter(this.API);
-      return;
-    }
+    if (ch === '\n') return this.handle('enter');
     var cursor = this.notify().cursor;
-    cursor.parent.write(cursor, ch, cursor.show().replaceSelection());
+    cursor.parent.write(cursor, ch);
     this.scrollHoriz();
   };
   _.paste = function(text) {
-    if (this.options.statelessClipboard) { // FIXME: document in README
+    // TODO: document `statelessClipboard` config option in README, after
+    // making it work like it should, that is, in both text and math mode
+    // (currently only works in math fields, so worse than pointless, it
+    //  only gets in the way by \text{}-ifying pasted stuff and $-ifying
+    //  cut/copied LaTeX)
+    if (this.API.__options.statelessClipboard) {
       if (text.slice(0,1) === '$' && text.slice(-1) === '$') {
         text = text.slice(1, -1);
       }

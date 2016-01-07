@@ -1,9 +1,9 @@
 # [MathQuill](http://mathquill.github.com)
 
-by [Han][] and [Jay][].  Current development is proudly supported by [Desmos][], whose awesome graphing calculator makes extensive use of Mathquill.
+by [Han][] and [Jeanine][].  Current development is proudly supported by [Desmos][], whose awesome graphing calculator makes extensive use of Mathquill.
 
 [Han]: http://github.com/laughinghan
-[Jay]: http://github.com/jayferd
+[Jeanine]: http://github.com/jneen
 [Desmos]: http://desmos.com/
 
 Please note that this is a beta version, so bugs and unimplemented features
@@ -15,17 +15,27 @@ Just load MathQuill and call our constructors on some HTML element DOM objects,
 for example:
 
 ```html
-<p>
-  Solve <span class="static-math">ax^2+bx+c=0</span>:
-  <span class="math-field">x=</span>
-</p>
 <link rel="stylesheet" href="/path/to/mathquill.css"/>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
 <script src="/path/to/mathquill.js"></script>
 <script>
-  $('.static-math').each(function() { MathQuill.StaticMath(this); });
-  $('.math-field').each(function() { MathQuill.MathField(this); });
+  MathQuill.interfaceVersion(1);
+  $(function() {
+    MathQuill.StaticMath($('#problem')[0]);
+    var answer = MathQuill.MathField($('#answer')[0], {
+      handlers: {
+        edit: function() {
+          checkAnswer(answer.latex());
+        }
+      }
+    });
+  });
 </script>
+
+<p>
+  Solve <span id="problem">ax^2 + bx + c = 0</span>:
+  <span id="answer">x=</span>
+</p>
 ```
 
 To load MathQuill,
@@ -39,11 +49,17 @@ To load MathQuill,
 [Google CDN-hosted copy]: http://code.google.com/apis/libraries/devguide.html#jquery
 [the latest tarball]: http://mathquill.com/downloads.html
 
+To use the MathQuill API, first declare an interface version:
+
+```js
+MathQuill.interfaceVersion(1);
+```
+
 Now you can call `MathQuill.StaticMath()` or `MathQuill.MathField()`, which
-MathQuill-ify an HTML element and return an API object. If it has already been
-MathQuill-ified into the same kind, return the original API object (if different
-or not an HTML element, `null`). Always returns either an instance of itself,
-or `null`.
+MathQuill-ify an HTML element and return an API object. If the element had
+already been MathQuill-ified into the same kind, return the original API object
+(if different kind or not an HTML element, `null`). Note that it always returns
+either an instance of itself, or `null`.
 
 ```js
 var staticMath = MathQuill.StaticMath(staticMathSpan);
@@ -66,10 +82,6 @@ MathQuill(mathFieldSpan) === mathField // => true
 MathQuill(mathFieldSpan) === MathQuill(mathFieldSpan) // => true
 ```
 
-`MathQuill.noConflict()` resets the global `MathQuill` variable to whatever it
-was before, and returns the `MathQuill` function to be used locally or set to
-some other variable, _a la_ [`jQuery.noConflict()`](http://api.jquery.com/jQuery.noConflict).
-
 Any element that has been MathQuill-ified can be reverted:
 
 ```html
@@ -81,15 +93,15 @@ Any element that has been MathQuill-ified can be reverted:
 MathQuill($('#revert-me')[0]).revert().html(); // => 'some <code>HTML</code>'
 ```
 
-MathQuill has to perform calculations based on computed CSS values. If you
-mathquill-ify an element before inserting into the visible HTML DOM, then once
-it is visible MathQuill will need to recalculate:
+MathQuill uses computed dimensions, so if they change (because an element was
+mathquill-ified before it was in the visible HTML DOM, or the font size
+changed), then you'll need to tell MathQuill to recompute:
 
 ```js
 var mathFieldSpan = $('<span>\\sqrt{2}</span>');
 var mathField = MathQuill.MathField(mathFieldSpan[0]);
 mathFieldSpan.appendTo(document.body);
-mathField.redraw();
+mathField.reflow();
 ```
 
 MathQuill API objects further expose the following public methods:
@@ -119,56 +131,53 @@ Additionally, descendants of `MathQuill.EditableField` (currently only
 
 [on `textarea`s]: http://www.w3.org/TR/DOM-Level-2-HTML/html.html#ID-48880622
 [on `input`s]: http://www.w3.org/TR/DOM-Level-2-HTML/html.html#ID-34677168
-[one of these key values]: http://www.w3.org/TR/2012/WD-DOM-Level-3-Events-20120614/#fixed-virtual-key-codes
+[key values]: http://www.w3.org/TR/2012/WD-DOM-Level-3-Events-20120614/#fixed-virtual-key-codes
 
-#### Global Behavior Options
+MathQuill overwrites the global `MathQuill` variable when loaded. You can undo
+that with `.noConflict()` (similar to [`jQuery.noConflict()`]
+(http://api.jquery.com/jQuery.noConflict)):
 
-These methods modify math typing behavior page-wide:
+```html
+<script src="/path/to/first-mathquill.js"></script>
+<script src="/path/to/second-mathquill.js"></script>
+<script>
+var secondMathQuill = MathQuill.interfaceVersion(1).noConflict();
+secondMathQuill.StaticMath(...);
+</script>
+```
 
-- `MathQuill.addAutoCommands('pi theta sqrt sum')` takes a space-delimited list
-  of LaTeX control words (no backslash, letters only, min length 2), and adds
-  them to the (default empty) set of "auto-commands", commands automatically
-  rendered by just typing the letters outside a `LatexCommandInput`
-- `MathQuill.overrideAutoUnitalicized('sin cos etc')` also takes a list of the
-  same form (space-delimited letters-only each length>=2), and overrides the set
-  of operator names that get automatically unitalicized when the letters are
-  typed, like `sin`, `log`, etc. (It defaults to
-  [the LaTeX built-in operator names][Wikia], but with additional trig operators
-  like `sech`, `arcsec`, `arsinh`, etc.)
-- `MathQuill.addCharsThatBreakOutOfSupSub('+-=<>')` sets the chars that when
-  typed, "break out" of super- and subscripts: for example, typing `x^2n+y`
-  normally results in the LaTeX `x^{2n+y}`, you have to hit Down or Tab (or
-  Space if `spaceBehavesLikeTab` is true) to move the cursor out of the exponent
-  and get the LaTeX `x^{2n}+y`; but this option can make `+` "break out" of
-  the exponent, and type what you expect. Problem is, now you can't just type
-  `x^n+m` to get the LaTeX `x^{n+m}`, you have to type `x^(n+m` and delete the
-  paren or something
-- `MathQuill.disableCharsWithoutOperand('^_')` disables typing of the given
-  chars when there's nothing to the left of the cursor (Desmos, for example,
-  disables `^` and `_`, so that typos like `x^^2` are friendlier)
-
-[Wikia]: http://latex.wikia.com/wiki/List_of_LaTeX_symbols#Named_operators:_sin.2C_cos.2C_etc.
-
-(TODO: methods to remove auto-commands etc, and per-field versions of all these
-methods, if useful ([#286](https://github.com/mathquill/mathquill/issues/286)))
-
-#### Handlers/Options
+#### Configuration Options
 
 `MathQuill.MathField()` can also take an options object:
 
 ```js
 var L = MathQuill.L, R = MathQuill.R;
 var el = $('<span>x^2</span>').appendTo('body');
-MathQuill.MathField(el[0], {
+var mathField = MathQuill.MathField(el[0], {
+  spaceBehavesLikeTab: true,
+  leftRightIntoCmdGoes: 'up',
+  restrictMismatchedBrackets: true,
+  sumStartsWithNEquals: true,
+  supSubsRequireOperand: true,
+  charsThatBreakOutOfSupSub: '+-=<>',
+  autoSubscriptNumerals: true,
+  autoCommands: 'pi theta sqrt sum',
+  autoOperatorNames: 'sin cos etc',
+  substituteTextarea: function() {
+    return document.createElement('textarea');
+  },
   handlers: {
-    edited: function(mathField) { ... },
+    edit: function(mathField) { ... },
     upOutOf: function(mathField) { ... },
     moveOutOf: function(dir, mathField) { if (dir === L) ... else ... }
-  },
-  spaceBehavesLikeTab: true,
-  leftRightIntoCmdGoes: 'up'
+  }
 });
 ```
+
+To change `mathField`'s options, the `.config({ ... })` method takes an options
+object in the same format.
+
+Global defaults for a page may be set with `MathQuill.config({ ... })`.
 
 If `spaceBehavesLikeTab` is true the keystrokes {Shift-,}Spacebar will behave
 like {Shift-,}Tab escaping from the current block (as opposed to the default
@@ -193,10 +202,62 @@ the same behavior as the Desmos calculator. `'down'` instead means it is the
 numerator that is always skipped, which is the same behavior as the Mac OS X
 built-in app Grapher.
 
+If `restrictMismatchedBrackets` is true then you can type [a,b) and [a,b), but
+if you try typing `[x}` or `\langle x|`, you'll get `[{x}]` or
+`\langle|x|\rangle` instead. This lets you type `(|x|+1)` normally; otherwise,
+you'd get `\left( \right| x \left| + 1 \right)`.
+
+If `sumStartsWithNEquals` is true then when you type `\sum`, `\prod`, or
+`\coprod`, the lower limit starts out with `n=`, e.g. you get the LaTeX
+`\sum_{n=}^{ }`, rather than empty by default.
+
+`supSubsRequireOperand` disables typing of superscripts and subscripts when
+there's nothing to the left of the cursor to be exponentiated or subscripted.
+Averts the especially confusing typo `x^^2`, which looks much like `x^2`.
+
+`charsThatBreakOutOfSupSub` sets the chars that when typed, "break out" of
+superscripts and subscripts: for example, typing `x^2n+y` normally results in
+the LaTeX `x^{2n+y}`, you have to hit Down or Tab (or Space if
+`spaceBehavesLikeTab` is true) to move the cursor out of the exponent and get
+the LaTeX `x^{2n}+y`; this option makes `+` "break out" of the exponent and
+type what you expect. Problem is, now you can't just type `x^n+m` to get the
+LaTeX `x^{n+m}`, you have to type `x^(n+m` and delete the paren or something.
+(Doesn't apply to the first character in a superscript or subscript, so typing
+`x^-6` still results in `x^{-6}`.)
+
+`autoCommands`, a space-delimited list of LaTeX control words (no backslash,
+letters only, min length 2), defines the (default empty) set of "auto-commands",
+commands automatically rendered by just typing the letters without typing a
+backslash first.
+
+`autoOperatorNames`, a list of the same form (space-delimited letters-only each
+length>=2), and overrides the set of operator names that automatically become
+non-italicized when typing the letters without typing a backslash first, like
+`sin`, `log`, etc. (Defaults to [the LaTeX built-in operator names][Wikia], but
+with additional trig operators like `sech`, `arcsec`, `arsinh`, etc.)
+
+[Wikia]: http://latex.wikia.com/wiki/List_of_LaTeX_symbols#Named_operators:_sin.2C_cos.2C_etc.
+
+`substituteTextarea`, a function that creates a focusable DOM element, called
+when setting up a math field. It defaults to `<textarea autocorrect=off .../>`,
+but for example, Desmos substitutes `<span tabindex=0></span>` on iOS to
+suppress the built-in virtual keyboard in favor of a custom math keypad that
+calls the MathQuill API. Unfortunately there's no universal [check for a virtual
+keyboard][StackOverflow], you can't even [detect a touchscreen][stucox] (notably
+[Modernizr gave up][Modernizr]) and even if you could, Windows 8 and ChromeOS
+devices have both physical keyboards and touchscreens and you can connect
+physical keyboards to iOS and Android devices with Bluetooth, so touchscreen !=
+virtual keyboard. Desmos currently sniffs the user agent for iOS, so Bluetooth
+keyboards just don't work in Desmos on iOS, the tradeoffs are up to you.
+
+[StackOverflow]: http://stackoverflow.com/q/2593139/362030
+[stucox]: http://www.stucox.com/blog/you-cant-detect-a-touchscreen/
+[Modernizr]: https://github.com/Modernizr/Modernizr/issues/548
+
 Supported handlers:
 - `moveOutOf`, `deleteOutOf`, and `selectOutOf` are called with `dir` and the
   math field API object as arguments
-- `upOutOf`, `downOutOf`, `enter`, and `edited` are called with just the API
+- `upOutOf`, `downOutOf`, `enter`, and `edit` are called with just the API
   object as the argument
 
 The `*OutOf` handlers are called when Left/Right/Up/Down/Backspace/Del/
@@ -209,10 +270,9 @@ arguments, and Backspace causes `deleteOutOf` (if provided) to be called with
 
 The `enter` handler is called whenever Enter is pressed.
 
-The `edited` handler is called when the field is edited (stuff is typed in,
-deleted, written with the API, etc), and occasionally for no reason. (That is,
-there's no guarantee the field has changed between calls to `edited`, but it is
-guaranteed `edited` is called whenever the field does change.)
+The `edit` handler is called when the contents of the field might have been
+changed by stuff being typed, or deleted, or written with the API, etc.
+(Deprecated aliases: `edited`, `reflow`.)
 
 Handlers are always called directly on the `handlers` object passed in,
 preserving the `this` value, so you can do stuff like:
@@ -242,7 +302,7 @@ over the math field:
 var latex = '';
 var mathField = MathQuill.MathField($('#mathfield')[0], {
   handlers: {
-    edited: function() { latex = mathField.latex(); },
+    edit: function() { latex = mathField.latex(); },
     enter: function() { submitLatex(latex); }
   }
 });
@@ -282,7 +342,7 @@ transforms, so MathQuill uses a matrix filter to stretch parens etc,
 which [anti-aliases wrongly without an opaque background][Transforms],
 so MathQuill defaults to white.)
 
-[Transforms]: http://github.com/laughinghan/mathquill/wiki/Transforms
+[Transforms]: http://github.com/mathquill/mathquill/wiki/Transforms
 
 ## Building and Testing
 
@@ -296,13 +356,20 @@ installing the necessary build tools.)
 - `make dev` won't try to minify MathQuill (which can be annoyingly slow)
 - `make test` builds `mathquill.test.js` (used by `test/unit.html`) and also
   doesn't minify
+- `make basic` builds `mathquill-basic.{js,min.js,css}` and
+  `font/Symbola-basic.{eot,ttf}`; serve and load them instead for a stripped-
+  down version of MathQuill for basic mathematics, without advanced LaTeX
+  commands. Specifically, it doesn't let you type LaTeX backslash commands
+  with `\` or text blocks with `$`, and also won't render any LaTeX commands
+  that can't by typed without `\`. The resulting JS is only somewhat smaller,
+  but the font is like 100x smaller. (TODO: reduce full MathQuill's font size.)
 
 ## Understanding The Source Code
 
 All the CSS is in `src/css`. Most of it's pretty straightforward, the choice of
 font isn't settled, and fractions are somewhat arcane, see the Wiki pages
-["Fonts"](http://github.com/laughinghan/mathquill/wiki/Fonts) and
-["Fractions"](http://github.com/laughinghan/mathquill/wiki/Fractions).
+["Fonts"](http://github.com/mathquill/mathquill/wiki/Fonts) and
+["Fractions"](http://github.com/mathquill/mathquill/wiki/Fractions).
 
 All the JavaScript that you actually want to read is in `src/`, `build/` is
 created by `make` to contain the same JS cat'ed and minified.
@@ -370,7 +437,7 @@ throughout MathQuill, plus some globals and opening boilerplate.
 Classes are defined using [Pjs][], and the variable `_` is used by convention as
 the prototype.
 
-[pjs]: https://github.com/jayferd/pjs
+[pjs]: https://github.com/jneen/pjs
 
 `services/*.util.js` files are unimportant to the overall architecture, you can
 ignore them until you have to deal with code that is using them.
