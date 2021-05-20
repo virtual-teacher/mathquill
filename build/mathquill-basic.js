@@ -2231,24 +2231,24 @@ Controller.open(function(_) {
 
     if (prev === 0 && next === 0) {
       if (node.classList.contains("mq-numerator")) {
-        message = "you're in an empty numerator";
+        message = "you are in an empty numerator";
       } else if (node.classList.contains("mq-denominator")) {
-        message = "you're in an empty denominator";
+        message = "you are in an empty denominator";
       } else if (node) {
-        message = "you're in an empty sub-expression";
+        message = "you are in an empty sub-expression";
       } else {
-        message = "you're in an empty math expression";
+        message = "you are in an empty math expression";
       }
     } else {
       if (prev === 0) {
         if (node.classList.contains("mq-numerator")) {
-          message = "you're at the start of the numerator";
+          message = "you are at the start of the numerator";
         } else if (node.classList.contains("mq-denominator")) {
-          message = "you're at the start of the denominator";
+          message = "you are at the start of the denominator";
         } else if (node) {
-          message = "you're at the start of a sub-expression";
+          message = "you are at the start of a sub-expression";
         } else {
-          message = "you're at the start of the math expression";
+          message = "you are at the start of the math expression";
         }
       } 
       
@@ -2258,13 +2258,13 @@ Controller.open(function(_) {
       
       if (next === 0) {
         if (node.classList.contains("mq-numerator")) {
-          message = "you're at the end of the numerator";
+          message = "you are at the end of the numerator";
         } else if (node.classList.contains("mq-denominator")) {
-          message = "you're at the end of the denominator";
+          message = "you are at the end of the denominator";
         } else if (node) {
-          message = "you're at the end of a sub-expression";
+          message = "you are at the end of a sub-expression";
         } else {
-          message = "you're at the end of the math expression";
+          message = "you are at the end of the math expression";
         }
       }
     }
