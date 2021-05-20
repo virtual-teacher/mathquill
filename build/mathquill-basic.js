@@ -2153,6 +2153,10 @@ Node.open(function(_) {
     function() { pray('overridden or never called on this node'); };
 });
 
+const getController = (cursor) => {
+  return cursor.controller || getController(cursor.parent);
+}
+
 Controller.open(function(_) {
   this.onNotify(function(e) {
     if (e === 'move' || e === 'upDown') this.show().clearSelection();
@@ -2183,28 +2187,95 @@ Controller.open(function(_) {
     prayDirection(dir);
     var cursor = this.cursor, updown = cursor.options.leftRightIntoCmdGoes;
 
+    let leaving = "";
+    if (dir === R && cursor[R] === 0) {
+      const parent = cursor.parent;
+      const node = parent.jQ[0];
+
+      if (node.classList.contains("mq-denominator")) {
+        leaving = "you exited a fraction";
+      }
+    }
+
+    let entering = "";
+    if (dir === R && cursor[R] !== 0) {
+      const ctrlSeq = cursor[R].ctrlSeq;
+      if (ctrlSeq === "\\frac") {
+        entering = "you entered a fraction";
+      }
+    }
+    if (dir === L && cursor[L] !== 0) {
+      const ctrlSeq = cursor[L].ctrlSeq;
+      if (ctrlSeq === "\\frac") {
+        entering = "you entered a fraction";
+      }
+    }
+
     if (cursor.selection) {
       cursor.insDirOf(dir, cursor.selection.ends[dir]);
     }
+
     else if (cursor[dir]) cursor[dir].moveTowards(dir, cursor, updown);
     else cursor.parent.moveOutOf(dir, cursor, updown);
 
-    // TODO: make this more robust so that we can get the controller even when
-    // we're inside a deeply nested node
-    const controller = cursor.parent.controller;
+    const controller = getController(cursor);
     const ariaLive = controller.ariaLive;
 
-    // R == 1
-    // L == -1
-    const next = cursor[R];
-    const prev = cursor[L];
-    console.log(next);
-    if (next) {
-      ariaLive.textContent = next.ctrlSeq;
-      // might need map between ctrlSeq and some more human friend
-    } else if (next === 0) {
-      ariaLive.textContent = "you're at the end of the math expression";
+    const next = cursor[R]; // R == 1
+    const prev = cursor[L]; // L == -1
+
+    const parent = cursor.parent;
+    const node = parent.jQ[0];
+
+    let message = "";
+
+    if (prev === 0 && next === 0) {
+      if (node.classList.contains("mq-numerator")) {
+        message = "you are in an empty numerator";
+      } else if (node.classList.contains("mq-denominator")) {
+        message = "you are in an empty denominator";
+      } else if (node) {
+        message = "you are in an empty sub-expression";
+      } else {
+        message = "you are in an empty math expression";
+      }
+    } else {
+      if (prev === 0) {
+        if (node.classList.contains("mq-numerator")) {
+          message = "you are at the start of the numerator";
+        } else if (node.classList.contains("mq-denominator")) {
+          message = "you are at the start of the denominator";
+        } else if (node) {
+          message = "you are at the start of a sub-expression";
+        } else {
+          message = "you are at the start of the math expression";
+        }
+      } 
+      
+      if (next) {
+        message = message ? `${message}, ${next.ctrlSeq}` : next.ctrlSeq;
+      }
+      
+      if (next === 0) {
+        if (node.classList.contains("mq-numerator")) {
+          message = "you are at the end of the numerator";
+        } else if (node.classList.contains("mq-denominator")) {
+          message = "you are at the end of the denominator";
+        } else if (node) {
+          message = "you are at the end of a sub-expression";
+        } else {
+          message = "you are at the end of the math expression";
+        }
+      }
     }
+
+    if (entering) {
+      message = `${entering}, ${message}`;
+    } else if (leaving) {
+      message = `${leaving}, ${message}`;
+    }
+
+    ariaLive.textContent = message;
 
     return this.notify('move');
   };
