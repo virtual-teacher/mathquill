@@ -2197,17 +2197,24 @@ Controller.open(function(_) {
       }
     }
 
+    // If the user navigates from one side of a character to another, `char`
+    // will contain the ctrlSeq for that character.
+    let char = "";
     let entering = "";
     if (dir === R && cursor[R] !== 0) {
       const ctrlSeq = cursor[R].ctrlSeq;
       if (ctrlSeq === "\\frac") {
         entering = "you entered a fraction";
+      } else {
+        char = ctrlSeq;
       }
     }
     if (dir === L && cursor[L] !== 0) {
       const ctrlSeq = cursor[L].ctrlSeq;
       if (ctrlSeq === "\\frac") {
         entering = "you entered a fraction";
+      } else {
+        char = ctrlSeq;
       }
     }
 
@@ -2217,9 +2224,6 @@ Controller.open(function(_) {
 
     else if (cursor[dir]) cursor[dir].moveTowards(dir, cursor, updown);
     else cursor.parent.moveOutOf(dir, cursor, updown);
-
-    const controller = getController(cursor);
-    const ariaLive = controller.ariaLive;
 
     const next = cursor[R]; // R == 1
     const prev = cursor[L]; // L == -1
@@ -2239,43 +2243,63 @@ Controller.open(function(_) {
       } else {
         message = "you are in an empty math expression";
       }
-    } else {
-      if (prev === 0) {
-        if (node.classList.contains("mq-numerator")) {
-          message = "you are at the start of the numerator";
-        } else if (node.classList.contains("mq-denominator")) {
-          message = "you are at the start of the denominator";
-        } else if (node) {
-          message = "you are at the start of a sub-expression";
-        } else {
-          message = "you are at the start of the math expression";
-        }
-      } 
-      
-      if (next) {
-        message = message ? `${message}, ${next.ctrlSeq}` : next.ctrlSeq;
+    } else if (prev === 0) {
+      if (node.classList.contains("mq-numerator")) {
+        message = "you are at the start of the numerator";
+      } else if (node.classList.contains("mq-denominator")) {
+        message = "you are at the start of the denominator";
+      } else if (node) {
+        message = "you are at the start of a sub-expression";
+      } else {
+        message = "you are at the start of the math expression";
       }
-      
-      if (next === 0) {
-        if (node.classList.contains("mq-numerator")) {
-          message = "you are at the end of the numerator";
-        } else if (node.classList.contains("mq-denominator")) {
-          message = "you are at the end of the denominator";
-        } else if (node) {
-          message = "you are at the end of a sub-expression";
-        } else {
-          message = "you are at the end of the math expression";
-        }
+    } else if (next === 0) {
+      if (node.classList.contains("mq-numerator")) {
+        message = "you are at the end of the numerator";
+      } else if (node.classList.contains("mq-denominator")) {
+        message = "you are at the end of the denominator";
+      } else if (node) {
+        message = "you are at the end of a sub-expression";
+      } else {
+        message = "you are at the end of the math expression";
       }
     }
+
+    const parts = [];
 
     if (entering) {
-      message = `${entering}, ${message}`;
-    } else if (leaving) {
-      message = `${leaving}, ${message}`;
+      parts.push(entering);
+    }
+    if (leaving) {
+      parts.push(leaving);
+    }
+    if (message) {
+      parts.push(message);
+    }
+    if (char) {
+      parts.push(char);
     }
 
-    ariaLive.textContent = message;
+    // Force the screen reader to re-read the aria-live region even if the text
+    // content is the same.  This is so that we can mimic the same behavior as
+    // ordinary <textarea>s which speak the character that the text cursor just
+    // navigated across.  If you go back and forth over the same character it
+    // will call it out each time.
+    const controller = getController(cursor);
+    document.body.removeChild(controller.ariaLive);
+
+    ariaLive = document.createElement("span");
+    ariaLive.setAttribute("role", "region");
+    ariaLive.setAttribute("id", "speaking");
+    ariaLive.setAttribute("aria-live", "assertive");
+    document.body.appendChild(ariaLive);
+    controller.ariaLive = ariaLive;
+
+    // Give the screen reader a bit of time before setting the text content to 
+    // avoid it missing the callout completely.
+    setTimeout(() => {
+      ariaLive.textContent = parts.join(", ");
+    }, 20);
 
     return this.notify('move');
   };
