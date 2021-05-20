@@ -2225,9 +2225,6 @@ Controller.open(function(_) {
     else if (cursor[dir]) cursor[dir].moveTowards(dir, cursor, updown);
     else cursor.parent.moveOutOf(dir, cursor, updown);
 
-    const controller = getController(cursor);
-    const ariaLive = controller.ariaLive;
-
     const next = cursor[R]; // R == 1
     const prev = cursor[L]; // L == -1
 
@@ -2283,7 +2280,26 @@ Controller.open(function(_) {
       parts.push(char);
     }
 
-    ariaLive.textContent = parts.join(", ");
+    // Force the screen reader to re-read the aria-live region even if the text
+    // content is the same.  This is so that we can mimic the same behavior as
+    // ordinary <textarea>s which speak the character that the text cursor just
+    // navigated across.  If you go back and forth over the same character it
+    // will call it out each time.
+    const controller = getController(cursor);
+    document.body.removeChild(controller.ariaLive);
+
+    ariaLive = document.createElement("span");
+    ariaLive.setAttribute("role", "region");
+    ariaLive.setAttribute("id", "speaking");
+    ariaLive.setAttribute("aria-live", "assertive");
+    document.body.appendChild(ariaLive);
+    controller.ariaLive = ariaLive;
+
+    // Give the screen reader a bit of time before setting the text content to 
+    // avoid it missing the callout completely.
+    setTimeout(() => {
+      ariaLive.textContent = parts.join(", ");
+    }, 20);
 
     return this.notify('move');
   };
