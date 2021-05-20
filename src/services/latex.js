@@ -77,29 +77,21 @@ Controller.open(function(_, super_) {
   _.exportLatex = function() {
     return this.root.latex().replace(/(\\[a-z]+) (?![a-z])/ig,'$1');
   };
+
+  optionProcessors.maxDepth = function(depth) {
+    return (typeof depth === 'number') ? depth : undefined;
+  };
   _.writeLatex = function(latex) {
     var cursor = this.notify('edit').cursor;
-
-    var all = Parser.all;
-    var eof = Parser.eof;
-
-    var block = latexMathParser.skip(eof).or(all.result(false)).parse(latex);
-
-    if (block && !block.isEmpty()) {
-      block.children().adopt(cursor.parent, cursor[L], cursor[R]);
-      var jQ = block.jQize();
-      jQ.insertBefore(cursor.jQ);
-      cursor[L] = block.ends[R];
-      block.finalizeInsert(cursor.options, cursor);
-      if (block.ends[R][R].siblingCreated) block.ends[R][R].siblingCreated(cursor.options, L);
-      if (block.ends[L][L].siblingCreated) block.ends[L][L].siblingCreated(cursor.options, R);
-      cursor.parent.bubble('reflow');
-    }
+    cursor.parent.writeLatex(cursor, latex);
 
     return this;
   };
   _.renderLatexMath = function(latex) {
-    var root = this.root, cursor = this.cursor;
+    var root = this.root;
+    var cursor = this.cursor;
+    var options = cursor.options;
+    var jQ = root.jQ;
 
     var all = Parser.all;
     var eof = Parser.eof;
@@ -109,13 +101,8 @@ Controller.open(function(_, super_) {
     root.eachChild('postOrder', 'dispose');
     root.ends[L] = root.ends[R] = 0;
 
-    if (block) {
+    if (block && block.prepareInsertionAt(cursor)) {
       block.children().adopt(root, 0, 0);
-    }
-
-    var jQ = root.jQ;
-
-    if (block) {
       var html = block.join('html');
       jQ.html(html);
       root.jQize(jQ.children());

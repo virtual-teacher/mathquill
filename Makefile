@@ -1,4 +1,21 @@
 #
+# -*- Prerequisites -*-
+#
+
+# the fact that 'I am Node.js' is unquoted here looks wrong to me but it
+# CAN'T be quoted, I tried. Apparently in GNU Makefiles, in the paren+comma
+# syntax for conditionals, quotes are literal; and because the $(shell...)
+# call has parentheses and single and double quotes, the quoted syntaxes
+# don't work (I tried), we HAVE to use the paren+comma syntax
+ifneq ($(shell node -e 'console.log("I am Node.js")'), I am Node.js)
+  ifeq ($(shell nodejs -e 'console.log("I am Node.js")' 2>/dev/null), I am Node.js)
+    $(error You have /usr/bin/nodejs but no /usr/bin/node, please 'sudo apt-get install nodejs-legacy' (see http://stackoverflow.com/a/21171188/362030 ))
+  endif
+
+  $(error Please install Node.js: https://nodejs.org/ )
+endif
+
+#
 # -*- Configuration -*-
 #
 
@@ -38,8 +55,8 @@ CSS_DIR = $(SRC_DIR)/css
 CSS_MAIN = $(CSS_DIR)/main.less
 CSS_SOURCES = $(shell find $(CSS_DIR) -name '*.less')
 
-FONT_SOURCE = $(SRC_DIR)/font
-FONT_TARGET = $(BUILD_DIR)/font
+FONT_SOURCE = $(SRC_DIR)/fonts
+FONT_TARGET = $(BUILD_DIR)/fonts
 
 UNIT_TESTS = ./test/unit/*.test.js
 
@@ -54,12 +71,6 @@ BASIC_CSS = $(BUILD_DIR)/mathquill-basic.css
 BUILD_TEST = $(BUILD_DIR)/mathquill.test.js
 UGLY_JS = $(BUILD_DIR)/mathquill.min.js
 UGLY_BASIC_JS = $(BUILD_DIR)/mathquill-basic.min.js
-CLEAN += $(BUILD_DIR)/*
-
-DISTDIR = ./mathquill-$(VERSION)
-DISTTAR = $(DISTDIR).tgz
-DISTZIP = $(DISTDIR).zip
-CLEAN += $(DISTTAR) $(DISTZIP)
 
 # programs and flags
 UGLIFY ?= ./node_modules/.bin/uglifyjs
@@ -85,7 +96,7 @@ BUILD_DIR_EXISTS = $(BUILD_DIR)/.exists--used_by_Makefile
 # -*- Build tasks -*-
 #
 
-.PHONY: all basic dev js uglify css font dist clean
+.PHONY: all basic dev js uglify css font clean
 all: font css uglify
 basic: $(UGLY_BASIC_JS) $(BASIC_CSS)
 # dev is like all, but without minification
@@ -95,29 +106,34 @@ uglify: $(UGLY_JS)
 css: $(BUILD_CSS)
 font: $(FONT_TARGET)
 clean:
-	rm -rf $(CLEAN)
+	rm -rf $(BUILD_DIR)
 
 $(PJS_SRC): $(NODE_MODULES_INSTALLED)
 
 $(BUILD_JS): $(INTRO) $(SOURCES_FULL) $(OUTRO) $(BUILD_DIR_EXISTS)
 	cat $^ | ./script/escape-non-ascii > $@
+	perl -pi -e s/{VERSION}/v$(VERSION)/ $@
 
 $(UGLY_JS): $(BUILD_JS) $(NODE_MODULES_INSTALLED)
 	$(UGLIFY) $(UGLIFY_OPTS) < $< > $@
 
 $(BASIC_JS): $(INTRO) $(SOURCES_BASIC) $(OUTRO) $(BUILD_DIR_EXISTS)
 	cat $^ | ./script/escape-non-ascii > $@
+	perl -pi -e s/{VERSION}/v$(VERSION)/ $@
 
 $(UGLY_BASIC_JS): $(BASIC_JS) $(NODE_MODULES_INSTALLED)
 	$(UGLIFY) $(UGLIFY_OPTS) < $< > $@
 
 $(BUILD_CSS): $(CSS_SOURCES) $(NODE_MODULES_INSTALLED) $(BUILD_DIR_EXISTS)
 	$(LESSC) $(LESS_OPTS) $(CSS_MAIN) > $@
+	perl -pi -e s/{VERSION}/v$(VERSION)/ $@
 
 $(BASIC_CSS): $(CSS_SOURCES) $(NODE_MODULES_INSTALLED) $(BUILD_DIR_EXISTS)
 	$(LESSC) --modify-var="basic=true" $(LESS_OPTS) $(CSS_MAIN) > $@
+	perl -pi -e s/{VERSION}/v$(VERSION)/ $@
 
 $(NODE_MODULES_INSTALLED): package.json
+	test -e $(NODE_MODULES_INSTALLED) || rm -rf ./node_modules/ # robust against previous botched npm install
 	NODE_ENV=development npm install
 	touch $(NODE_MODULES_INSTALLED)
 
@@ -128,13 +144,6 @@ $(BUILD_DIR_EXISTS):
 $(FONT_TARGET): $(FONT_SOURCE) $(BUILD_DIR_EXISTS)
 	rm -rf $@
 	cp -r $< $@
-
-dist: $(UGLY_JS) $(BUILD_JS) $(BUILD_CSS) $(FONT_TARGET)
-	rm -rf $(DISTDIR)
-	cp -r $(BUILD_DIR) $(DISTDIR)
-	zip -r -X $(DISTZIP) $(DISTDIR)
-	tar -czf $(DISTTAR) $(DISTDIR)
-	rm -r $(DISTDIR)
 
 #
 # -*- Test tasks -*-
@@ -149,3 +158,4 @@ test: dev $(BUILD_TEST) $(BASIC_JS) $(BASIC_CSS)
 
 $(BUILD_TEST): $(INTRO) $(SOURCES_FULL) $(UNIT_TESTS) $(OUTRO) $(BUILD_DIR_EXISTS)
 	cat $^ > $@
+	perl -pi -e s/{VERSION}/v$(VERSION)/ $@

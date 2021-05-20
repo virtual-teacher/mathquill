@@ -27,15 +27,15 @@ var TextBlock = P(Node, function(_, super_) {
     var textBlock = this;
     super_.createLeftOf.call(this, cursor);
 
-    if (textBlock[R].siblingCreated) textBlock[R].siblingCreated(cursor.options, L);
-    if (textBlock[L].siblingCreated) textBlock[L].siblingCreated(cursor.options, R);
-    textBlock.bubble('reflow');
-
     cursor.insAtRightEnd(textBlock);
 
     if (textBlock.replacedText)
       for (var i = 0; i < textBlock.replacedText.length; i += 1)
         textBlock.write(cursor, textBlock.replacedText.charAt(i));
+
+    if (textBlock[R].siblingCreated) textBlock[R].siblingCreated(cursor.options, L);
+    if (textBlock[L].siblingCreated) textBlock[L].siblingCreated(cursor.options, R);
+    textBlock.bubble('reflow');
   };
 
   _.parser = function() {
@@ -65,7 +65,7 @@ var TextBlock = P(Node, function(_, super_) {
   _.latex = function() {
     var contents = this.textContents();
     if (contents.length === 0) return '';
-    return '\\text{' + contents + '}';
+    return '\\text{' + contents.replace(/\\/g, '\\backslash ').replace(/[{}]/g, '\\$&') + '}';
   };
   _.html = function() {
     return (
@@ -113,8 +113,14 @@ var TextBlock = P(Node, function(_, super_) {
       leftPc.adopt(leftBlock, 0, 0);
 
       cursor.insLeftOf(this);
-      super_.createLeftOf.call(leftBlock, cursor);
+      super_.createLeftOf.call(leftBlock, cursor); // micro-optimization, not for correctness
     }
+    this.bubble('reflow');
+  };
+  _.writeLatex = function(cursor, latex) {
+    if (!cursor[L]) TextPiece(latex).createLeftOf(cursor);
+    else cursor[L].appendText(latex);
+    this.bubble('reflow');
   };
 
   _.seek = function(pageX, cursor) {
@@ -296,7 +302,6 @@ var TextPiece = P(Node, function(_, super_) {
   };
 });
 
-CharCmds.$ =
 LatexCmds.text =
 LatexCmds.textnormal =
 LatexCmds.textrm =

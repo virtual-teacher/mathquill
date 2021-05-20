@@ -14,9 +14,9 @@ LatexCmds.otimes = P(BinaryOperator, function(_, super_) {
 
 LatexCmds['≠'] = LatexCmds.ne = LatexCmds.neq = bind(BinaryOperator,'\\ne ','&ne;');
 
-LatexCmds.ast = LatexCmds.star = LatexCmds.loast = LatexCmds.lowast =
+LatexCmds['∗'] = LatexCmds.ast = LatexCmds.star = LatexCmds.loast = LatexCmds.lowast =
   bind(BinaryOperator,'\\ast ','&lowast;');
-  //case 'there4 = // a special exception for this one, perhaps?
+
 LatexCmds.therefor = LatexCmds.therefore =
   bind(BinaryOperator,'\\therefore ','&there4;');
 
@@ -70,8 +70,26 @@ LatexCmds.nsupersete = LatexCmds.nsuperseteq =
 LatexCmds.notsupersete = LatexCmds.notsuperseteq =
   bind(BinaryOperator,'\\not\\supseteq ','&#8841;');
 
-
 //the canonical sets of numbers
+LatexCmds.mathbb = P(MathCommand, function(_) {
+  _.createLeftOf = noop;
+  _.numBlocks = function() { return 1; };
+  _.parser = function() {
+    var string = Parser.string;
+    var regex = Parser.regex;
+    var optWhitespace = Parser.optWhitespace;
+    return optWhitespace.then(string('{'))
+          .then(optWhitespace)
+          .then(regex(/^[NPZQRCH]/))
+          .skip(optWhitespace)
+          .skip(string('}'))
+          .map(function(c) {
+              // instantiate the class for the matching char
+              return LatexCmds[c]();
+    });
+  };
+});
+
 LatexCmds.N = LatexCmds.naturals = LatexCmds.Naturals =
   bind(VanillaSymbol,'\\mathbb{N}','&#8469;');
 
@@ -293,20 +311,22 @@ LatexCmds.part = LatexCmds.partial = bind(VanillaSymbol,'\\partial ','&part;');
 LatexCmds.infty = LatexCmds.infin = LatexCmds.infinity =
   bind(VanillaSymbol,'\\infty ','&infin;');
 
+LatexCmds.pounds = bind(VanillaSymbol,'\\pounds ','&pound;');
+
 LatexCmds.alef = LatexCmds.alefsym = LatexCmds.aleph = LatexCmds.alephsym =
   bind(VanillaSymbol,'\\aleph ','&alefsym;');
 
 LatexCmds.xist = //LOL
 LatexCmds.xists = LatexCmds.exist = LatexCmds.exists =
   bind(VanillaSymbol,'\\exists ','&exist;');
-  
+
 LatexCmds.nexists = LatexCmds.nexist =
       bind(VanillaSymbol, '\\nexists ', '&#8708;');
 
 LatexCmds.and = LatexCmds.land = LatexCmds.wedge =
-  bind(VanillaSymbol,'\\wedge ','&and;');
+  bind(BinaryOperator,'\\wedge ','&and;');
 
-LatexCmds.or = LatexCmds.lor = LatexCmds.vee = bind(VanillaSymbol,'\\vee ','&or;');
+LatexCmds.or = LatexCmds.lor = LatexCmds.vee = bind(BinaryOperator,'\\vee ','&or;');
 
 LatexCmds.o = LatexCmds.O =
 LatexCmds.empty = LatexCmds.emptyset =
