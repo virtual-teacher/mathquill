@@ -177,9 +177,6 @@ Controller.open(function(_) {
     return updown;
   };
   _.moveDir = function(dir) {
-    // TODO: use the direction to determine what we're going to be entering or
-    // what we've exited.
-
     prayDirection(dir);
     var cursor = this.cursor, updown = cursor.options.leftRightIntoCmdGoes;
 
@@ -200,6 +197,12 @@ Controller.open(function(_) {
         entering = "you entered a fraction";
       }
     }
+    if (dir === L && cursor[L] !== 0) {
+      const ctrlSeq = cursor[L].ctrlSeq;
+      if (ctrlSeq === "\\frac") {
+        entering = "you entered a fraction";
+      }
+    }
 
     if (cursor.selection) {
       cursor.insDirOf(dir, cursor.selection.ends[dir]);
@@ -211,44 +214,51 @@ Controller.open(function(_) {
     const controller = getController(cursor);
     const ariaLive = controller.ariaLive;
 
-    // R == 1
-    // L == -1
-    const next = cursor[R];
-    const prev = cursor[L];
-    console.log(next);
-
-    // TODO: handle a completely empty row
+    const next = cursor[R]; // R == 1
+    const prev = cursor[L]; // L == -1
 
     const parent = cursor.parent;
     const node = parent.jQ[0];
 
     let message = "";
 
-    if (prev === 0) {
+    if (prev === 0 && next === 0) {
       if (node.classList.contains("mq-numerator")) {
-        message = "you're at the start of a numerator";
+        message = "you're in an empty numerator";
       } else if (node.classList.contains("mq-denominator")) {
-        message = "you're at the start of a denominator";
+        message = "you're in an empty denominator";
       } else if (node) {
-        message = "you're at the start of a sub-expression";
+        message = "you're in an empty sub-expression";
       } else {
-        message = "you're at the start of the math expression";
+        message = "you're in an empty math expression";
       }
-    } 
-    
-    if (next) {
-      message = message ? `${message}, ${next.ctrlSeq}` : next.ctrlSeq;
-    }
-    
-    if (next === 0) {
-      if (node.classList.contains("mq-numerator")) {
-        message = "you're at the end of a numerator";
-      } else if (node.classList.contains("mq-denominator")) {
-        message = "you're at the end of a denominator";
-      } else if (node) {
-        message = "you're at the end of a sub-expression";
-      } else {
-        message = "you're at the end of the math expression";
+    } else {
+      if (prev === 0) {
+        if (node.classList.contains("mq-numerator")) {
+          message = "you're at the start of the numerator";
+        } else if (node.classList.contains("mq-denominator")) {
+          message = "you're at the start of the denominator";
+        } else if (node) {
+          message = "you're at the start of a sub-expression";
+        } else {
+          message = "you're at the start of the math expression";
+        }
+      } 
+      
+      if (next) {
+        message = message ? `${message}, ${next.ctrlSeq}` : next.ctrlSeq;
+      }
+      
+      if (next === 0) {
+        if (node.classList.contains("mq-numerator")) {
+          message = "you're at the end of the numerator";
+        } else if (node.classList.contains("mq-denominator")) {
+          message = "you're at the end of the denominator";
+        } else if (node) {
+          message = "you're at the end of a sub-expression";
+        } else {
+          message = "you're at the end of the math expression";
+        }
       }
     }
 
