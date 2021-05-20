@@ -182,6 +182,23 @@ Controller.open(function(_) {
     else if (cursor[dir]) cursor[dir].moveTowards(dir, cursor, updown);
     else cursor.parent.moveOutOf(dir, cursor, updown);
 
+    // TODO: make this more robust so that we can get the controller even when
+    // we're inside a deeply nested node
+    const controller = cursor.parent.controller;
+    const ariaLive = controller.ariaLive;
+
+    // R == 1
+    // L == -1
+    const next = cursor[R];
+    const prev = cursor[L];
+    console.log(next);
+    if (next) {
+      ariaLive.textContent = next.ctrlSeq;
+      // might need map between ctrlSeq and some more human friend
+    } else if (next === 0) {
+      ariaLive.textContent = "you're at the end of the math expression";
+    }
+
     return this.notify('move');
   };
   _.moveLeft = function() { return this.moveDir(L); };

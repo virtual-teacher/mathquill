@@ -894,6 +894,14 @@ var Controller = P(function(_) {
 
     root.controller = this;
 
+    // Create an aria live region where we can insert text to be spoken
+    ariaLive = document.createElement("span");
+    ariaLive.setAttribute("role", "region");
+    ariaLive.setAttribute("id", "speaking");
+    ariaLive.setAttribute("aria-live", "assertive");
+    document.body.appendChild(ariaLive);
+    this.ariaLive = ariaLive;
+
     this.cursor = root.cursor = Cursor(root, options);
     // TODO: stop depending on root.cursor, and rm it
   };
@@ -1028,7 +1036,7 @@ function getInterface(v) {
 
       var contents = el.addClass(classNames).contents().detach();
       root.jQ =
-        $('<span class="mq-root-block"/>').attr(mqBlockId, root.id).appendTo(el);
+        $('<span class="mq-root-block" aria-hidden="true"/>').attr(mqBlockId, root.id).appendTo(el);
       this.latex(contents.text());
 
       this.revert = function() {
@@ -2180,6 +2188,23 @@ Controller.open(function(_) {
     }
     else if (cursor[dir]) cursor[dir].moveTowards(dir, cursor, updown);
     else cursor.parent.moveOutOf(dir, cursor, updown);
+
+    // TODO: make this more robust so that we can get the controller even when
+    // we're inside a deeply nested node
+    const controller = cursor.parent.controller;
+    const ariaLive = controller.ariaLive;
+
+    // R == 1
+    // L == -1
+    const next = cursor[R];
+    const prev = cursor[L];
+    console.log(next);
+    if (next) {
+      ariaLive.textContent = next.ctrlSeq;
+      // might need map between ctrlSeq and some more human friend
+    } else if (next === 0) {
+      ariaLive.textContent = "you're at the end of the math expression";
+    }
 
     return this.notify('move');
   };

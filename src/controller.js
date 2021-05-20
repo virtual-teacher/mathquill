@@ -17,6 +17,14 @@ var Controller = P(function(_) {
 
     root.controller = this;
 
+    // Create an aria live region where we can insert text to be spoken
+    ariaLive = document.createElement("span");
+    ariaLive.setAttribute("role", "region");
+    ariaLive.setAttribute("id", "speaking");
+    ariaLive.setAttribute("aria-live", "assertive");
+    document.body.appendChild(ariaLive);
+    this.ariaLive = ariaLive;
+
     this.cursor = root.cursor = Cursor(root, options);
     // TODO: stop depending on root.cursor, and rm it
   };
