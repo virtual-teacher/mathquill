@@ -17,15 +17,13 @@
 
 <h1><a href="http://mathquill.github.com">MathQuill</a>-basic Demo <small>local test page</small></h1>
 
-<p>Backslash <code>\</code> and dollar <code>$</code> aren't special, <code>/</code> still works, font works:
-
 <p><span id="basic">1+2+3+4</span>
 
 <p><textarea id="basic-latex"></textarea>
 
 </div>
 <script type="text/javascript" src="support/jquery-1.5.2.js"></script>
-<script type="text/javascript" src="../build/mathquill-basic.js"></script>
+<script type="text/javascript" src="../build/mathquill.js"></script>
 <script type="text/javascript">
 MQ = MathQuill.getInterface(MathQuill.getInterface.MAX);
 
@@ -36,12 +34,7 @@ var latex = $('#basic-latex').bind('keydown keypress', function() {
     if (now !== prev) mq.latex(now);
   });
 });
-var mq = MQ.MathField($('#basic')[0], {
-  autoSubscriptNumerals: true,
-  handlers: { edit: function() {
-    if (!latex.is(':focus')) latex.val(mq.latex());
-  } }
-});
+var mq = MQ.MathField($('#basic')[0]);
 latex.val(mq.latex());
 </script>
 </body>
