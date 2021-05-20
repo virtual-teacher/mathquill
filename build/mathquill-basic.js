@@ -2197,17 +2197,24 @@ Controller.open(function(_) {
       }
     }
 
+    // If the user navigates from one side of a character to another, `char`
+    // will contain the ctrlSeq for that character.
+    let char = "";
     let entering = "";
     if (dir === R && cursor[R] !== 0) {
       const ctrlSeq = cursor[R].ctrlSeq;
       if (ctrlSeq === "\\frac") {
         entering = "you entered a fraction";
+      } else {
+        char = ctrlSeq;
       }
     }
     if (dir === L && cursor[L] !== 0) {
       const ctrlSeq = cursor[L].ctrlSeq;
       if (ctrlSeq === "\\frac") {
         entering = "you entered a fraction";
+      } else {
+        char = ctrlSeq;
       }
     }
 
@@ -2239,43 +2246,44 @@ Controller.open(function(_) {
       } else {
         message = "you are in an empty math expression";
       }
-    } else {
-      if (prev === 0) {
-        if (node.classList.contains("mq-numerator")) {
-          message = "you are at the start of the numerator";
-        } else if (node.classList.contains("mq-denominator")) {
-          message = "you are at the start of the denominator";
-        } else if (node) {
-          message = "you are at the start of a sub-expression";
-        } else {
-          message = "you are at the start of the math expression";
-        }
-      } 
-      
-      if (next) {
-        message = message ? `${message}, ${next.ctrlSeq}` : next.ctrlSeq;
+    } else if (prev === 0) {
+      if (node.classList.contains("mq-numerator")) {
+        message = "you are at the start of the numerator";
+      } else if (node.classList.contains("mq-denominator")) {
+        message = "you are at the start of the denominator";
+      } else if (node) {
+        message = "you are at the start of a sub-expression";
+      } else {
+        message = "you are at the start of the math expression";
       }
-      
-      if (next === 0) {
-        if (node.classList.contains("mq-numerator")) {
-          message = "you are at the end of the numerator";
-        } else if (node.classList.contains("mq-denominator")) {
-          message = "you are at the end of the denominator";
-        } else if (node) {
-          message = "you are at the end of a sub-expression";
-        } else {
-          message = "you are at the end of the math expression";
-        }
+    } else if (next === 0) {
+      if (node.classList.contains("mq-numerator")) {
+        message = "you are at the end of the numerator";
+      } else if (node.classList.contains("mq-denominator")) {
+        message = "you are at the end of the denominator";
+      } else if (node) {
+        message = "you are at the end of a sub-expression";
+      } else {
+        message = "you are at the end of the math expression";
       }
     }
+
+    const parts = [];
 
     if (entering) {
-      message = `${entering}, ${message}`;
-    } else if (leaving) {
-      message = `${leaving}, ${message}`;
+      parts.push(entering);
+    }
+    if (leaving) {
+      parts.push(leaving);
+    }
+    if (message) {
+      parts.push(message);
+    }
+    if (char) {
+      parts.push(char);
     }
 
-    ariaLive.textContent = message;
+    ariaLive.textContent = parts.join(", ");
 
     return this.notify('move');
   };
