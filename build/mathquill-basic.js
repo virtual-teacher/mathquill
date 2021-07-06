@@ -1602,6 +1602,18 @@ var saneKeyboardEvents = (function() {
     };
   };
 }());
+/***********************************************
+ * Export math in a human-readable text format
+ * As you can see, only half-baked so far.
+ **********************************************/
+
+Controller.open(function(_, super_) {
+  _.exportText = function() {
+    return this.root.foldChildren('', function(text, child) {
+      return text + child.text();
+    });
+  };
+});
 Controller.open(function(_) {
   _.focusBlurEvents = function() {
     var ctrlr = this, root = ctrlr.root, cursor = ctrlr.cursor;
@@ -1657,101 +1669,6 @@ Controller.open(function(_) {
  * I'm not even sure there aren't other troublesome calls to .focus() or
  * .blur(), so this is TODO for now.
  */
-/***********************************************
- * Export math in a human-readable text format
- * As you can see, only half-baked so far.
- **********************************************/
-
-Controller.open(function(_, super_) {
-  _.exportText = function() {
-    return this.root.foldChildren('', function(text, child) {
-      return text + child.text();
-    });
-  };
-});
-/********************************************************
- * Deals with mouse events for clicking, drag-to-select
- *******************************************************/
-
-Controller.open(function(_) {
-  _.delegateMouseEvents = function() {
-    var ultimateRootjQ = this.root.jQ;
-    //drag-to-select event handling
-    this.container.bind('mousedown.mathquill', function(e) {
-      var rootjQ = $(e.target).closest('.mq-root-block');
-      var root = Node.byId[rootjQ.attr(mqBlockId) || ultimateRootjQ.attr(mqBlockId)];
-      var ctrlr = root.controller, cursor = ctrlr.cursor, blink = cursor.blink;
-      var textareaSpan = ctrlr.textareaSpan, textarea = ctrlr.textarea;
-
-      var target;
-      function mousemove(e) { target = $(e.target); }
-      function docmousemove(e) {
-        if (!cursor.anticursor) cursor.startSelection();
-        ctrlr.seek(target, e.pageX, e.pageY).cursor.select();
-        target = undefined;
-      }
-      // outside rootjQ, the MathQuill node corresponding to the target (if any)
-      // won't be inside this root, so don't mislead Controller::seek with it
-
-      function mouseup(e) {
-        cursor.blink = blink;
-        if (!cursor.selection) {
-          if (ctrlr.editable) {
-            cursor.show();
-          }
-          else {
-            textareaSpan.detach();
-          }
-        }
-
-        // delete the mouse handlers now that we're not dragging anymore
-        rootjQ.unbind('mousemove', mousemove);
-        $(e.target.ownerDocument).unbind('mousemove', docmousemove).unbind('mouseup', mouseup);
-      }
-
-      if (ctrlr.blurred) {
-        if (!ctrlr.editable) rootjQ.prepend(textareaSpan);
-        textarea.focus();
-      }
-      e.preventDefault(); // doesn't work in IE\u22648, but it's a one-line fix:
-      e.target.unselectable = true; // http://jsbin.com/yagekiji/1
-
-      cursor.blink = noop;
-      ctrlr.seek($(e.target), e.pageX, e.pageY).cursor.startSelection();
-
-      rootjQ.mousemove(mousemove);
-      $(e.target.ownerDocument).mousemove(docmousemove).mouseup(mouseup);
-      // listen on document not just body to not only hear about mousemove and
-      // mouseup on page outside field, but even outside page, except iframes: https://github.com/mathquill/mathquill/commit/8c50028afcffcace655d8ae2049f6e02482346c5#commitcomment-6175800
-    });
-  }
-});
-
-Controller.open(function(_) {
-  _.seek = function(target, pageX, pageY) {
-    var cursor = this.notify('select').cursor;
-
-    if (target) {
-      var nodeId = target.attr(mqBlockId) || target.attr(mqCmdId);
-      if (!nodeId) {
-        var targetParent = target.parent();
-        nodeId = targetParent.attr(mqBlockId) || targetParent.attr(mqCmdId);
-      }
-    }
-    var node = nodeId ? Node.byId[nodeId] : this.root;
-    pray('nodeId is the id of some Node that exists', node);
-
-    // don't clear selection until after getting node from target, in case
-    // target was selection span, otherwise target will have no parent and will
-    // seek from root, which is less accurate (e.g. fraction)
-    cursor.clearSelection().show();
-
-    node.seek(pageX, cursor);
-    this.scrollHoriz(); // before .selectFrom when mouse-selecting, so
-                        // always hits no-selection case in scrollHoriz and scrolls slower
-    return this;
-  };
-});
 /*****************************************
  * Deals with the browser DOM events from
  * interaction with the typist.
@@ -2035,117 +1952,6 @@ Controller.open(function(_) {
   _.selectLeft = function() { return this.selectDir(L); };
   _.selectRight = function() { return this.selectDir(R); };
 });
-/*********************************************
- * Manage the MathQuill instance's textarea
- * (as owned by the Controller)
- ********************************************/
-
-Controller.open(function(_) {
-  Options.p.substituteTextarea = function() {
-    return $('<textarea autocapitalize=off autocomplete=off autocorrect=off ' +
-               'spellcheck=false x-palm-disable-ste-all=true />')[0];
-  };
-  _.createTextarea = function() {
-    var textareaSpan = this.textareaSpan = $('<span class="mq-textarea"></span>'),
-      textarea = this.options.substituteTextarea();
-    if (!textarea.nodeType) {
-      throw 'substituteTextarea() must return a DOM element, got ' + textarea;
-    }
-    textarea = this.textarea = $(textarea).appendTo(textareaSpan);
-
-    var ctrlr = this;
-    ctrlr.cursor.selectionChanged = function() { ctrlr.selectionChanged(); };
-    ctrlr.container.bind('copy', function() { ctrlr.setTextareaSelection(); });
-  };
-  _.selectionChanged = function() {
-    var ctrlr = this;
-    forceIERedraw(ctrlr.container[0]);
-
-    // throttle calls to setTextareaSelection(), because setting textarea.value
-    // and/or calling textarea.select() can have anomalously bad performance:
-    // https://github.com/mathquill/mathquill/issues/43#issuecomment-1399080
-    if (ctrlr.textareaSelectionTimeout === undefined) {
-      ctrlr.textareaSelectionTimeout = setTimeout(function() {
-        ctrlr.setTextareaSelection();
-      });
-    }
-  };
-  _.setTextareaSelection = function() {
-    this.textareaSelectionTimeout = undefined;
-    var latex = '';
-    if (this.cursor.selection) {
-      latex = this.cursor.selection.join('latex');
-      if (this.options.statelessClipboard) {
-        // FIXME: like paste, only this works for math fields; should ask parent
-        latex = '$' + latex + '$';
-      }
-    }
-    this.selectFn(latex);
-  };
-  _.staticMathTextareaEvents = function() {
-    var ctrlr = this, root = ctrlr.root, cursor = ctrlr.cursor,
-      textarea = ctrlr.textarea, textareaSpan = ctrlr.textareaSpan;
-
-    this.container.prepend('<span class="mq-selectable">$'+ctrlr.exportLatex()+'$</span>');
-    ctrlr.blurred = true;
-    textarea.bind('cut paste', false)
-    .focus(function() { ctrlr.blurred = false; }).blur(function() {
-      if (cursor.selection) cursor.selection.clear();
-      setTimeout(detach); //detaching during blur explodes in WebKit
-    });
-    function detach() {
-      textareaSpan.detach();
-      ctrlr.blurred = true;
-    }
-
-    ctrlr.selectFn = function(text) {
-      textarea.val(text);
-      if (text) textarea.select();
-    };
-  };
-  _.editablesTextareaEvents = function() {
-    var ctrlr = this, root = ctrlr.root, cursor = ctrlr.cursor,
-      textarea = ctrlr.textarea, textareaSpan = ctrlr.textareaSpan;
-
-    var keyboardEventsShim = saneKeyboardEvents(textarea, this);
-    this.selectFn = function(text) { keyboardEventsShim.select(text); };
-
-    this.container.prepend(textareaSpan)
-    .on('cut', function(e) {
-      if (cursor.selection) {
-        setTimeout(function() {
-          ctrlr.notify('edit'); // deletes selection if present
-          cursor.parent.bubble('reflow');
-        });
-      }
-    });
-
-    this.focusBlurEvents();
-  };
-  _.typedText = function(ch) {
-    if (ch === '\n') return this.handle('enter');
-    var cursor = this.notify().cursor;
-    cursor.parent.write(cursor, ch);
-    this.scrollHoriz();
-  };
-  _.paste = function(text) {
-    // TODO: document `statelessClipboard` config option in README, after
-    // making it work like it should, that is, in both text and math mode
-    // (currently only works in math fields, so worse than pointless, it
-    //  only gets in the way by \text{}-ifying pasted stuff and $-ifying
-    //  cut/copied LaTeX)
-    if (this.options.statelessClipboard) {
-      if (text.slice(0,1) === '$' && text.slice(-1) === '$') {
-        text = text.slice(1, -1);
-      }
-      else {
-        text = '\\text{'+text+'}';
-      }
-    }
-    // FIXME: this always inserts math or a TextBlock, even in a RootTextBlock
-    this.writeLatex(text).cursor.show();
-  };
-});
 // Parser MathBlock
 var latexMathParser = (function() {
   function commandToBlock(cmd) { // can also take in a Fragment
@@ -2324,6 +2130,89 @@ Controller.open(function(_, super_) {
     }
   };
 });
+/********************************************************
+ * Deals with mouse events for clicking, drag-to-select
+ *******************************************************/
+
+Controller.open(function(_) {
+  _.delegateMouseEvents = function() {
+    var ultimateRootjQ = this.root.jQ;
+    //drag-to-select event handling
+    this.container.bind('mousedown.mathquill', function(e) {
+      var rootjQ = $(e.target).closest('.mq-root-block');
+      var root = Node.byId[rootjQ.attr(mqBlockId) || ultimateRootjQ.attr(mqBlockId)];
+      var ctrlr = root.controller, cursor = ctrlr.cursor, blink = cursor.blink;
+      var textareaSpan = ctrlr.textareaSpan, textarea = ctrlr.textarea;
+
+      var target;
+      function mousemove(e) { target = $(e.target); }
+      function docmousemove(e) {
+        if (!cursor.anticursor) cursor.startSelection();
+        ctrlr.seek(target, e.pageX, e.pageY).cursor.select();
+        target = undefined;
+      }
+      // outside rootjQ, the MathQuill node corresponding to the target (if any)
+      // won't be inside this root, so don't mislead Controller::seek with it
+
+      function mouseup(e) {
+        cursor.blink = blink;
+        if (!cursor.selection) {
+          if (ctrlr.editable) {
+            cursor.show();
+          }
+          else {
+            textareaSpan.detach();
+          }
+        }
+
+        // delete the mouse handlers now that we're not dragging anymore
+        rootjQ.unbind('mousemove', mousemove);
+        $(e.target.ownerDocument).unbind('mousemove', docmousemove).unbind('mouseup', mouseup);
+      }
+
+      if (ctrlr.blurred) {
+        if (!ctrlr.editable) rootjQ.prepend(textareaSpan);
+        textarea.focus();
+      }
+      e.preventDefault(); // doesn't work in IE\u22648, but it's a one-line fix:
+      e.target.unselectable = true; // http://jsbin.com/yagekiji/1
+
+      cursor.blink = noop;
+      ctrlr.seek($(e.target), e.pageX, e.pageY).cursor.startSelection();
+
+      rootjQ.mousemove(mousemove);
+      $(e.target.ownerDocument).mousemove(docmousemove).mouseup(mouseup);
+      // listen on document not just body to not only hear about mousemove and
+      // mouseup on page outside field, but even outside page, except iframes: https://github.com/mathquill/mathquill/commit/8c50028afcffcace655d8ae2049f6e02482346c5#commitcomment-6175800
+    });
+  }
+});
+
+Controller.open(function(_) {
+  _.seek = function(target, pageX, pageY) {
+    var cursor = this.notify('select').cursor;
+
+    if (target) {
+      var nodeId = target.attr(mqBlockId) || target.attr(mqCmdId);
+      if (!nodeId) {
+        var targetParent = target.parent();
+        nodeId = targetParent.attr(mqBlockId) || targetParent.attr(mqCmdId);
+      }
+    }
+    var node = nodeId ? Node.byId[nodeId] : this.root;
+    pray('nodeId is the id of some Node that exists', node);
+
+    // don't clear selection until after getting node from target, in case
+    // target was selection span, otherwise target will have no parent and will
+    // seek from root, which is less accurate (e.g. fraction)
+    cursor.clearSelection().show();
+
+    node.seek(pageX, cursor);
+    this.scrollHoriz(); // before .selectFrom when mouse-selecting, so
+                        // always hits no-selection case in scrollHoriz and scrolls slower
+    return this;
+  };
+});
 /***********************************************
  * Horizontal panning for editable fields that
  * overflow their width
@@ -2361,6 +2250,117 @@ Controller.open(function(_) {
       }
     }
     this.root.jQ.stop().animate({ scrollLeft: '+=' + scrollBy}, 100);
+  };
+});
+/*********************************************
+ * Manage the MathQuill instance's textarea
+ * (as owned by the Controller)
+ ********************************************/
+
+Controller.open(function(_) {
+  Options.p.substituteTextarea = function() {
+    return $('<textarea autocapitalize=off autocomplete=off autocorrect=off ' +
+               'spellcheck=false x-palm-disable-ste-all=true />')[0];
+  };
+  _.createTextarea = function() {
+    var textareaSpan = this.textareaSpan = $('<span class="mq-textarea"></span>'),
+      textarea = this.options.substituteTextarea();
+    if (!textarea.nodeType) {
+      throw 'substituteTextarea() must return a DOM element, got ' + textarea;
+    }
+    textarea = this.textarea = $(textarea).appendTo(textareaSpan);
+
+    var ctrlr = this;
+    ctrlr.cursor.selectionChanged = function() { ctrlr.selectionChanged(); };
+    ctrlr.container.bind('copy', function() { ctrlr.setTextareaSelection(); });
+  };
+  _.selectionChanged = function() {
+    var ctrlr = this;
+    forceIERedraw(ctrlr.container[0]);
+
+    // throttle calls to setTextareaSelection(), because setting textarea.value
+    // and/or calling textarea.select() can have anomalously bad performance:
+    // https://github.com/mathquill/mathquill/issues/43#issuecomment-1399080
+    if (ctrlr.textareaSelectionTimeout === undefined) {
+      ctrlr.textareaSelectionTimeout = setTimeout(function() {
+        ctrlr.setTextareaSelection();
+      });
+    }
+  };
+  _.setTextareaSelection = function() {
+    this.textareaSelectionTimeout = undefined;
+    var latex = '';
+    if (this.cursor.selection) {
+      latex = this.cursor.selection.join('latex');
+      if (this.options.statelessClipboard) {
+        // FIXME: like paste, only this works for math fields; should ask parent
+        latex = '$' + latex + '$';
+      }
+    }
+    this.selectFn(latex);
+  };
+  _.staticMathTextareaEvents = function() {
+    var ctrlr = this, root = ctrlr.root, cursor = ctrlr.cursor,
+      textarea = ctrlr.textarea, textareaSpan = ctrlr.textareaSpan;
+
+    this.container.prepend('<span class="mq-selectable">$'+ctrlr.exportLatex()+'$</span>');
+    ctrlr.blurred = true;
+    textarea.bind('cut paste', false)
+    .focus(function() { ctrlr.blurred = false; }).blur(function() {
+      if (cursor.selection) cursor.selection.clear();
+      setTimeout(detach); //detaching during blur explodes in WebKit
+    });
+    function detach() {
+      textareaSpan.detach();
+      ctrlr.blurred = true;
+    }
+
+    ctrlr.selectFn = function(text) {
+      textarea.val(text);
+      if (text) textarea.select();
+    };
+  };
+  _.editablesTextareaEvents = function() {
+    var ctrlr = this, root = ctrlr.root, cursor = ctrlr.cursor,
+      textarea = ctrlr.textarea, textareaSpan = ctrlr.textareaSpan;
+
+    var keyboardEventsShim = saneKeyboardEvents(textarea, this);
+    this.selectFn = function(text) { keyboardEventsShim.select(text); };
+
+    this.container.prepend(textareaSpan)
+    .on('cut', function(e) {
+      if (cursor.selection) {
+        setTimeout(function() {
+          ctrlr.notify('edit'); // deletes selection if present
+          cursor.parent.bubble('reflow');
+        });
+      }
+    });
+
+    this.focusBlurEvents();
+  };
+  _.typedText = function(ch) {
+    if (ch === '\n') return this.handle('enter');
+    var cursor = this.notify().cursor;
+    cursor.parent.write(cursor, ch);
+    this.scrollHoriz();
+  };
+  _.paste = function(text) {
+    // TODO: document `statelessClipboard` config option in README, after
+    // making it work like it should, that is, in both text and math mode
+    // (currently only works in math fields, so worse than pointless, it
+    //  only gets in the way by \text{}-ifying pasted stuff and $-ifying
+    //  cut/copied LaTeX)
+    if (this.options.statelessClipboard) {
+      if (text.slice(0,1) === '$' && text.slice(-1) === '$') {
+        text = text.slice(1, -1);
+      }
+      else {
+        text = '\\text{'+text+'}';
+      }
+    }
+    // FIXME: this always inserts math or a TextBlock, even in a RootTextBlock
+    this.writeLatex(text).cursor.show();
   };
 });
 /*************************************************
