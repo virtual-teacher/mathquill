@@ -8,10 +8,9 @@
  * one at http://mozilla.org/MPL/2.0/.
  */
 
-(function() {
+var jQuery = require('jquery');
 
-var jQuery = window.jQuery,
-  undefined,
+var undefined,
   mqCmdId = 'mathquill-command-id',
   mqBlockId = 'mathquill-block-id',
   min = Math.min,
@@ -4472,4 +4471,4 @@ for (var key in MQ1) (function(key, val) {
   else MathQuill[key] = val;
 }(key, MQ1[key]));
 
-}());
+module.exports = MathQuill;
