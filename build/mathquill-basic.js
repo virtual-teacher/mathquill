@@ -3336,7 +3336,7 @@ var TwoWordOpNames = { limsup: 1, liminf: 1, projlim: 1, injlim: 1 };
     BuiltInOpNames[builtInTrigs[i]] = 1;
   }
 
-  var autoTrigs = 'sin cos tan sec cosec csc cotan cot ctg'.split(' ');
+  var autoTrigs = 'sin cos tan tg sec cosec csc cotan cot ctg'.split(' ');
   for (var i = 0; i < autoTrigs.length; i += 1) {
     AutoOpNames[autoTrigs[i]] =
     AutoOpNames['arc'+autoTrigs[i]] =
