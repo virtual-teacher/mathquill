@@ -3331,7 +3331,7 @@ var TwoWordOpNames = { limsup: 1, liminf: 1, projlim: 1, injlim: 1 };
   }
 
   var builtInTrigs = // why coth but not sech and csch, LaTeX?
-    'sin cos tan arcsin arccos arctan sinh cosh tanh sec csc cot coth'.split(' ');
+    'sin cos tan tg arcsin arccos arctan sinh cosh tanh sec csc cot coth ctg'.split(' ');
   for (var i = 0; i < builtInTrigs.length; i += 1) {
     BuiltInOpNames[builtInTrigs[i]] = 1;
   }
