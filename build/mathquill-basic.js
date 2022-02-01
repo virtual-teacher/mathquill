@@ -4339,25 +4339,37 @@ function bindCharBracketPair(open, ctrlSeq) {
 bindCharBracketPair('(');
 bindCharBracketPair('[');
 bindCharBracketPair('{', '\\{');
-LatexCmds.langle = CharCmds['&lang;'] = bind(Bracket, L, '&lang;', '&rang;', '\\langle', '\\rangle');
-LatexCmds.rangle = CharCmds['&rang;'] = bind(Bracket, R, '&lang;', '&rang;', '\\langle', '\\rangle');
+LatexCmds.langle = CharCmds['&lang;'] = bind(Bracket, L, '&lang;', '&rang;', '\\langle ', '\\rangle ');
+LatexCmds.rangle = CharCmds['&rang;'] = bind(Bracket, R, '&lang;', '&rang;', '\\langle ', '\\rangle ');
 CharCmds['|'] = bind(Bracket, L, '|', '|', '|', '|');
 
 LatexCmds.left = P(MathCommand, function(_) {
   _.parser = function() {
     var regex = Parser.regex;
     var string = Parser.string;
-    var succeed = Parser.succeed;
     var optWhitespace = Parser.optWhitespace;
 
-    return optWhitespace.then(regex(/^(?:[([|]|\\\{)/))
-      .then(function(ctrlSeq) { // TODO: \langle, \rangle
+    return optWhitespace.then(regex(/^(?:[([|]|\\\{)/).or(string('\\langle')))
+      .then(function(ctrlSeq) {
         var open = (ctrlSeq.charAt(0) === '\\' ? ctrlSeq.slice(1) : ctrlSeq);
         return latexMathParser.then(function (block) {
           return string('\\right').skip(optWhitespace)
-            .then(regex(/^(?:[\])|]|\\\})/)).map(function(end) {
+            .then(regex(/^(?:[\])|]|\\\})/).or(string('\\rangle'))).map(function(end) {
+              var charsMap = {
+                "langle": "&lang;",
+                "rangle": "&rang;",
+              };
+              var seqMap = {
+                "\\langle": "\\langle ",
+                "\\rangle": "\\rangle ",
+              };
               var close = (end.charAt(0) === '\\' ? end.slice(1) : end);
-              var cmd = Bracket(0, open, close, ctrlSeq, end);
+              var cmd = Bracket(0,
+                charsMap[open] || open,
+                charsMap[close] || close,
+                seqMap[ctrlSeq] || ctrlSeq,
+                seqMap[end] || end
+              );
               cmd.blocks = [ block ];
               block.adopt(cmd, 0, 0);
               return cmd;
