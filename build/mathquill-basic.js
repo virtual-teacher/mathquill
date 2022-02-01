@@ -4303,10 +4303,12 @@ var Bracket = P(P(MathCommand, DelimsMixin), function(_, super_) {
     };
     // FIXME HACK: after initial creation/insertion, finalizeTree would only be
     // called if the paren is selected and replaced, e.g. by LiveFraction
-    this.finalizeTree = this.intentionalBlur = function() {
+    this.finalizeTree = function() {
       this.delimjQs.eq(this.side === L ? 1 : 0).removeClass('mq-ghost');
       this.side = 0;
     };
+    // Disable this to not close brackets when user tries to close them using button
+    // this.intentionalBlur = this.finalizeTree;
   };
   _.siblingCreated = function(opts, dir) { // if something typed between ghost and far
     if (dir === -this.side) this.finalizeTree(); // end of its block, solidify
@@ -4337,9 +4339,8 @@ function bindCharBracketPair(open, ctrlSeq) {
 bindCharBracketPair('(');
 bindCharBracketPair('[');
 bindCharBracketPair('{', '\\{');
-bindCharBracketPair('\\langle');
-LatexCmds.langle = bind(Bracket, L, '&lang;', '&rang;', '\\langle ', '\\rangle ');
-LatexCmds.rangle = bind(Bracket, R, '&lang;', '&rang;', '\\langle ', '\\rangle ');
+LatexCmds.langle = CharCmds['&lang;'] = bind(Bracket, L, '&lang;', '&rang;', '\\langle', '\\rangle');
+LatexCmds.rangle = CharCmds['&rang;'] = bind(Bracket, R, '&lang;', '&rang;', '\\langle', '\\rangle');
 CharCmds['|'] = bind(Bracket, L, '|', '|', '|', '|');
 
 LatexCmds.left = P(MathCommand, function(_) {
