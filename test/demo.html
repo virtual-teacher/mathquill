@@ -50,12 +50,8 @@
         >
       </p>
 
-      <button type="button" class="latex-cmd" data-value="(">
-        (
-      </button>
-      <button type="button" class="latex-cmd" data-value=")">
-        )
-      </button>
+      <button type="button" class="latex-cmd" data-value="(">(</button>
+      <button type="button" class="latex-cmd" data-value=")">)</button>
       <button type="button" class="latex-cmd" data-value="\langle">
         langle
       </button>
@@ -157,7 +153,13 @@
           MQ.StaticMath(this);
         });
         $(".mathquill-math-field").each(function () {
-          const mq = MQ.MathField(this);
+          const mq = MQ.MathField(this, {
+            handlers: {
+              edit: (mathField) => {
+                console.log(mathField.latex());
+              },
+            },
+          });
           $(".latex-cmd").each(function () {
             const $this = $(this);
             const value = $this.data("value");

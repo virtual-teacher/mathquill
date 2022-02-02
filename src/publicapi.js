@@ -173,6 +173,8 @@ function getInterface(v) {
       }
       else cursor.parent.write(cursor, cmd);
       if (ctrlr.blurred) cursor.hide().parent.blur();
+      // we want to trigger `edit` event on `cmd()` call
+      this.__controller.handle("edit");
       return this;
     };
     _.select = function() {

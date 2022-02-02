@@ -1074,6 +1074,8 @@ function getInterface(v) {
       }
       else cursor.parent.write(cursor, cmd);
       if (ctrlr.blurred) cursor.hide().parent.blur();
+      // we want to trigger `edit` event on `cmd()` call
+      this.__controller.handle("edit");
       return this;
     };
     _.select = function() {
@@ -2343,6 +2345,9 @@ Controller.open(function(_) {
     var cursor = this.notify().cursor;
     cursor.parent.write(cursor, ch);
     this.scrollHoriz();
+    // we want to trigger `edit` event on closing brackets ect
+    // generally it would be better to trigger it somewhere in Bracket.createLeafOf()
+    this.handle('edit');
   };
   _.paste = function(text) {
     // TODO: document `statelessClipboard` config option in README, after
